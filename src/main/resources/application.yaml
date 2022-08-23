@@ -1,0 +1,16 @@
+zrpc:
+    remotes:
+    - serverName: ServiceA
+      schema: http
+      endpoint: 127.0.0.1
+      port: 9603
+    - serverName: ServiceB
+      schema: http
+      endpoint: 127.0.0.1
+      port: 9600
+    socket:
+          connectTimeoutInMs: 500
+          readTimeoutInMs: 500
+          writeTimeoutInMs: 500
+          maxIdleConnections: 50
+          keepAliveDurationInMin: 5
