@@ -77,7 +77,7 @@ ZRPC为了解决这个问题进行了类型自动映射, 使用者仅需要在�
 ```java
 @ZRPCSerializeBinder(remoteClassName = "com.xxx.remote.model.TestModel", currentClass = TestModel.class)
 @ZRPCSerializeBinder(remoteClassName = "com.xxx.remote.model.Body", currentClass = Body.class)
-TestModel getTestModel(Body body);
+List<TestModel> getTestModel(Body body);
 ```
 也可以使用另外一个注解`@ZRPCSerializeBinders`, 例如:
 ```java
