@@ -33,7 +33,7 @@ public class RemoteCaller implements ApplicationContextAware {
     private static ApplicationContext applicationContext;
 
     private ZRPCSocketConfig lastSocketConfig;
-    private OkHttpClient okHttpClient;
+    private OkHttpClient httpClient;
 
     public ZRPCResponse call(ZRPCRequest request) throws ZRPCException {
         ZRPCConfig.RemoteConfig remoteConfig = this.getZRPConfig().getRemoteConfig(request.getServerName());
@@ -54,7 +54,6 @@ public class RemoteCaller implements ApplicationContextAware {
     }
 
     private String sendPost(URL url, Object obj) throws IOException {
-        OkHttpClient client = this.getHttpClient();
         RequestBody body = RequestBody.create(JSON.toJSONString(obj), MEDIA_TYPE_JSON);
         Request request = new Request.Builder()
                 .header(HttpHeaders.USER_AGENT, ZRPConstants.REMOTE_CALLER_USERAGENT)
@@ -62,7 +61,7 @@ public class RemoteCaller implements ApplicationContextAware {
                 .post(body)
                 .build();
 
-        try (Response response = client.newCall(request).execute()) {
+        try (Response response = this.getHttpClient().newCall(request).execute()) {
             if (!response.isSuccessful()) {
                 return null;
             }
@@ -81,11 +80,10 @@ public class RemoteCaller implements ApplicationContextAware {
         ZRPCSocketConfig socketConfig = this.getZRPConfig().getSocket();
         if (this.lastSocketConfig == null || !this.lastSocketConfig.equals(socketConfig)) {
             this.lastSocketConfig = socketConfig;
-            this.okHttpClient = this.newHttpClient(socketConfig);
-            return this.okHttpClient;
+            this.httpClient = this.newHttpClient(socketConfig);
         }
-        
-        return this.okHttpClient;
+
+        return this.httpClient;
     }
 
     private OkHttpClient newHttpClient(ZRPCSocketConfig socketConfig) {
