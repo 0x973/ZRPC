@@ -1,6 +1,7 @@
 package cn.pingbase.zrpc.config;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * @author: Zak
@@ -8,6 +9,7 @@ import lombok.Data;
  * @description: TODO
  */
 @Data
+@EqualsAndHashCode
 public class ZRPCSocketConfig {
     private Integer connectTimeoutInMs = 500;
     private Integer readTimeoutInMs = 500;

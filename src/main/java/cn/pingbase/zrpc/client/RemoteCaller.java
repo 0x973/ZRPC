@@ -32,6 +32,9 @@ public class RemoteCaller implements ApplicationContextAware {
     private static final String ZRPC_CONTROLLER_PATH = "/zrpc";
     private static ApplicationContext applicationContext;
 
+    private ZRPCSocketConfig lastSocketConfig;
+    private OkHttpClient okHttpClient;
+
     public ZRPCResponse call(ZRPCRequest request) throws ZRPCException {
         ZRPCConfig.RemoteConfig remoteConfig = this.getZRPConfig().getRemoteConfig(request.getServerName());
         if (remoteConfig == null) {
@@ -51,11 +54,12 @@ public class RemoteCaller implements ApplicationContextAware {
     }
 
     private String sendPost(URL url, Object obj) throws IOException {
-        OkHttpClient client = this.makeHttpClient();
+        OkHttpClient client = this.getHttpClient();
         RequestBody body = RequestBody.create(JSON.toJSONString(obj), MEDIA_TYPE_JSON);
-        Request request = new Request.Builder().url(url).post(body)
-                .header(HttpHeaders.CONNECTION, "close")
+        Request request = new Request.Builder()
                 .header(HttpHeaders.USER_AGENT, ZRPConstants.REMOTE_CALLER_USERAGENT)
+                .url(url)
+                .post(body)
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
@@ -73,8 +77,22 @@ public class RemoteCaller implements ApplicationContextAware {
         return null;
     }
 
-    private OkHttpClient makeHttpClient() {
+    private OkHttpClient getHttpClient() {
         ZRPCSocketConfig socketConfig = this.getZRPConfig().getSocket();
+        if (this.lastSocketConfig == null) {
+            this.lastSocketConfig = socketConfig;
+            this.okHttpClient = this.newHttpClient(socketConfig);
+            return this.okHttpClient;
+        }
+
+        if (!this.lastSocketConfig.equals(socketConfig)) {
+            this.okHttpClient = this.newHttpClient(socketConfig);
+        }
+
+        return this.okHttpClient;
+    }
+
+    private OkHttpClient newHttpClient(ZRPCSocketConfig socketConfig) {
         OkHttpClient.Builder builder = new OkHttpClient().newBuilder();
         builder.connectTimeout(socketConfig.getConnectTimeoutInMs(), TimeUnit.MILLISECONDS);
         builder.readTimeout(socketConfig.getReadTimeoutInMs(), TimeUnit.MILLISECONDS);
@@ -86,7 +104,7 @@ public class RemoteCaller implements ApplicationContextAware {
 
     private ZRPCConfig getZRPConfig() {
         ZRPCConfig zrpcConfig = applicationContext.getBean(ZRPCConfig.class);
-        Assert.notNull(zrpcConfig, "The ZRPC config must config.");
+        Assert.notNull(zrpcConfig, "The ZRPC config can not be null.");
         return zrpcConfig;
     }
 
