@@ -79,16 +79,12 @@ public class RemoteCaller implements ApplicationContextAware {
 
     private OkHttpClient getHttpClient() {
         ZRPCSocketConfig socketConfig = this.getZRPConfig().getSocket();
-        if (this.lastSocketConfig == null) {
+        if (this.lastSocketConfig == null || !this.lastSocketConfig.equals(socketConfig)) {
             this.lastSocketConfig = socketConfig;
             this.okHttpClient = this.newHttpClient(socketConfig);
             return this.okHttpClient;
         }
-
-        if (!this.lastSocketConfig.equals(socketConfig)) {
-            this.okHttpClient = this.newHttpClient(socketConfig);
-        }
-
+        
         return this.okHttpClient;
     }
 
