@@ -87,13 +87,14 @@ public class RemoteCaller implements ApplicationContextAware {
     }
 
     private OkHttpClient newHttpClient(ZRPCSocketConfig socketConfig) {
-        OkHttpClient.Builder builder = new OkHttpClient().newBuilder();
-        builder.connectTimeout(socketConfig.getConnectTimeoutInMs(), TimeUnit.MILLISECONDS);
-        builder.readTimeout(socketConfig.getReadTimeoutInMs(), TimeUnit.MILLISECONDS);
-        builder.writeTimeout(socketConfig.getWriteTimeoutInMs(), TimeUnit.MILLISECONDS);
-        builder.connectionPool(new ConnectionPool(socketConfig.getMaxIdleConnections(), socketConfig.getKeepAliveDurationInMin(),
-                TimeUnit.MINUTES));
-        return builder.build();
+        ConnectionPool connectionPool = new ConnectionPool(socketConfig.getMaxIdleConnections(), socketConfig.getKeepAliveDurationInMin(), TimeUnit.MINUTES);
+
+        return new OkHttpClient().newBuilder()
+                .connectTimeout(socketConfig.getConnectTimeoutInMs(), TimeUnit.MILLISECONDS)
+                .readTimeout(socketConfig.getReadTimeoutInMs(), TimeUnit.MILLISECONDS)
+                .writeTimeout(socketConfig.getWriteTimeoutInMs(), TimeUnit.MILLISECONDS)
+                .connectionPool(connectionPool)
+                .build();
     }
 
     private ZRPCConfig getZRPConfig() {
