@@ -14,14 +14,14 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ZRPCRemoteService {
     /**
-     * remote service identifier
+     * remote server identifier
      *
      * @return
      */
     String serviceIdentifier();
 
     /**
-     * service impl class(if you have multiple implementations class).
+     * server impl class(if you have multiple implementations class).
      *
      * @return
      */

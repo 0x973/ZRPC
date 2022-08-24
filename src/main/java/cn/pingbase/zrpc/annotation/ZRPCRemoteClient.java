@@ -15,13 +15,13 @@ import java.lang.annotation.Target;
 public @interface ZRPCRemoteClient {
 
     /**
-     * remote service instance name
+     * remote server instance name
      * @return
      */
     String serverName();
 
     /**
-     * remote service identifier
+     * remote server identifier
      * @return
      */
     String serviceIdentifier();

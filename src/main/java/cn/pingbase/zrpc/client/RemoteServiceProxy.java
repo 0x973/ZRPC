@@ -5,8 +5,8 @@ import cn.pingbase.zrpc.annotation.ZRPCRemoteClient;
 import cn.pingbase.zrpc.annotation.ZRPCSerializeBinder;
 import cn.pingbase.zrpc.annotation.ZRPCThrowableBinder;
 import cn.pingbase.zrpc.exception.ZRPCBusinessException;
-import cn.pingbase.zrpc.result.ZRPCRequest;
-import cn.pingbase.zrpc.result.ZRPCResponse;
+import cn.pingbase.zrpc.model.ZRPCRequest;
+import cn.pingbase.zrpc.model.ZRPCResponse;
 import cn.pingbase.zrpc.exception.ZRPCException;
 import org.springframework.util.StringUtils;
 
@@ -106,7 +106,7 @@ public class RemoteServiceProxy<T> implements InvocationHandler {
 
     private void checkResultSuccess(ZRPCResponse result, ZRPCThrowableBinder annotation) throws Throwable {
         if (result == null) {
-            throw new ZRPCException("Failed to call zrpc remote service.");
+            throw new ZRPCException("Failed to call zrpc remote server.");
         }
 
         if (result.isSuccess()) {

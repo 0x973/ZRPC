@@ -1,4 +1,4 @@
-package cn.pingbase.zrpc.result;
+package cn.pingbase.zrpc.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

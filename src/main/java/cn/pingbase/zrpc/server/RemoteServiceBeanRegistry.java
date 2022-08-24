@@ -1,4 +1,4 @@
-package cn.pingbase.zrpc.service;
+package cn.pingbase.zrpc.server;
 
 import cn.pingbase.zrpc.annotation.ZRPCPackageScan;
 import cn.pingbase.zrpc.annotation.ZRPCRemoteService;
@@ -44,7 +44,7 @@ public class RemoteServiceBeanRegistry implements ApplicationContextAware {
                 clazzSet.forEach(RemoteServiceBeanRegistry::registryClassToBeanStore);
             }
         } catch (Exception e) {
-            log.warn("Remote service bean registry error.", e);
+            log.warn("Remote server bean registry error.", e);
         }
     }
 

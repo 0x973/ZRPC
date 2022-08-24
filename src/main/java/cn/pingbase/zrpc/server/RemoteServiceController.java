@@ -1,8 +1,8 @@
-package cn.pingbase.zrpc.service;
+package cn.pingbase.zrpc.server;
 
 import cn.pingbase.zrpc.consts.ZRPConstants;
-import cn.pingbase.zrpc.result.ZRPCRequest;
-import cn.pingbase.zrpc.result.ZRPCResponse;
+import cn.pingbase.zrpc.model.ZRPCRequest;
+import cn.pingbase.zrpc.model.ZRPCResponse;
 import com.alibaba.fastjson2.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
