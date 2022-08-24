@@ -76,7 +76,7 @@ public class RemoteServiceController {
 
         } catch (Exception e) {
             log.warn("ZRPC Remote call exception.", e);
-            return ZRPCResponse.makeFailResult("Server parsing exception, message: " + e.getMessage());
+            return ZRPCResponse.makeFailResult("Server parsing error, message: " + e.getMessage());
         }
     }
 
