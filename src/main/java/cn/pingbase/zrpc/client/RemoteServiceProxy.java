@@ -1,6 +1,6 @@
 package cn.pingbase.zrpc.client;
 
-import com.alibaba.fastjson2.JSON;
+import cn.pingbase.zrpc.serialization.ZRPCSerialization;
 import cn.pingbase.zrpc.annotation.ZRPCRemoteClient;
 import cn.pingbase.zrpc.annotation.ZRPCSerializeBinder;
 import cn.pingbase.zrpc.annotation.ZRPCThrowableBinder;
@@ -51,9 +51,9 @@ public class RemoteServiceProxy<T> implements InvocationHandler {
         try {
             Class<?> clazz = this.getSerializerClass(serializerAnnotations, result.getResultType());
             if (result.isList()) {
-                return JSON.parseArray(result.getResultValue(), clazz);
+                return ZRPCSerialization.parseArray(result.getResultValue(), clazz);
             }
-            return JSON.parseObject(result.getResultValue(), clazz);
+            return ZRPCSerialization.parseObject(result.getResultValue(), clazz);
         } catch (ClassNotFoundException e) {
             throw new ZRPCException("Class not found, please check your package classes.", e);
         } catch (Exception e) {
@@ -96,8 +96,12 @@ public class RemoteServiceProxy<T> implements InvocationHandler {
                     .findFirst();
             String className = serializer.isPresent() ? serializer.get().remoteClassName() : argValue.getClass().getName();
             argument.setTypeClassName(className);
-            Object obj = String.class.getTypeName().equals(className) ? argValue : JSON.toJSONString(argValue);
-            argument.setObject(obj);
+
+            if (String.class.getTypeName().equals(className)) {
+                argument.setObject(argValue);
+            } else {
+                argument.setObject(ZRPCSerialization.toJSONString(argValue));
+            }
 
             argumentList.add(argument);
         }

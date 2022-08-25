@@ -1,6 +1,6 @@
 package cn.pingbase.zrpc.client;
 
-import com.alibaba.fastjson2.JSON;
+import cn.pingbase.zrpc.serialization.ZRPCSerialization;
 import cn.pingbase.zrpc.config.ZRPCConfig;
 import cn.pingbase.zrpc.config.ZRPCSocketConfig;
 import cn.pingbase.zrpc.consts.ZRPConstants;
@@ -47,14 +47,14 @@ public class RemoteCaller implements ApplicationContextAware {
                     .port(remoteConfig.getPort())
                     .path(ZRPC_CONTROLLER_PATH)
                     .build().toUri().toURL();
-            return JSON.parseObject(this.sendPost(url, request), ZRPCResponse.class);
+            return ZRPCSerialization.parseObject(this.sendPost(url, request), ZRPCResponse.class);
         } catch (Exception e) {
             return ZRPCResponse.makeFailResult("Remote call failed, message: " + e.getMessage());
         }
     }
 
     private String sendPost(URL url, Object obj) throws IOException {
-        RequestBody body = RequestBody.create(JSON.toJSONString(obj), MEDIA_TYPE_JSON);
+        RequestBody body = RequestBody.create(ZRPCSerialization.toJSONString(obj), MEDIA_TYPE_JSON);
         Request request = new Request.Builder()
                 .header(HttpHeaders.USER_AGENT, ZRPConstants.REMOTE_CALLER_USERAGENT)
                 .url(url)

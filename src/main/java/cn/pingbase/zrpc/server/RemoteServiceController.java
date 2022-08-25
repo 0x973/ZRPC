@@ -3,7 +3,7 @@ package cn.pingbase.zrpc.server;
 import cn.pingbase.zrpc.consts.ZRPConstants;
 import cn.pingbase.zrpc.model.ZRPCRequest;
 import cn.pingbase.zrpc.model.ZRPCResponse;
-import com.alibaba.fastjson2.JSON;
+import cn.pingbase.zrpc.serialization.ZRPCSerialization;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.util.StringUtils;
@@ -64,9 +64,9 @@ public class RemoteServiceController {
             try {
                 Object result = method.invoke(beanObject, argValueArray);
                 if (isList) {
-                    return ZRPCResponse.makeSuccessListResult(returnTypeName, JSON.toJSONString(result));
+                    return ZRPCResponse.makeSuccessListResult(returnTypeName, ZRPCSerialization.toJSONString(result));
                 }
-                return ZRPCResponse.makeSuccessResult(returnTypeName, JSON.toJSONString(result));
+                return ZRPCResponse.makeSuccessResult(returnTypeName, ZRPCSerialization.toJSONString(result));
             } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
                 log.error("ZRPC method call exception", e);
                 return ZRPCResponse.makeFailResult("Server call method exception.");
@@ -74,6 +74,8 @@ public class RemoteServiceController {
                 return ZRPCResponse.makeFailResult(businessEx.getMessage(), true);
             }
 
+        } catch (NoSuchMethodException e) {
+            return ZRPCResponse.makeFailResult("Service method not found, please check your interface class.");
         } catch (Exception e) {
             log.warn("ZRPC Remote call exception.", e);
             return ZRPCResponse.makeFailResult("Server parsing error, message: " + e.getMessage());
@@ -86,12 +88,13 @@ public class RemoteServiceController {
         for (int i = 0; i < args.size(); i++) {
             ZRPCRequest.Argument argument = args.get(i);
             Object object = argument.getObject();
-            if (String.class.getTypeName().equals(argument.getTypeClassName())) {
+            String typeClassName = argument.getTypeClassName();
+            if (String.class.getTypeName().equals(typeClassName)) {
                 argValueArray[i] = object;
             } else if (argument.getIsList()) {
-                argValueArray[i] = JSON.parseArray((String) object, Class.forName(argument.getTypeClassName()));
+                argValueArray[i] = ZRPCSerialization.parseArray((String) object, Class.forName(typeClassName));
             } else {
-                argValueArray[i] = JSON.parseObject((String) object, Class.forName(argument.getTypeClassName()));
+                argValueArray[i] = ZRPCSerialization.parseObject((String) object, Class.forName(typeClassName));
             }
         }
 
