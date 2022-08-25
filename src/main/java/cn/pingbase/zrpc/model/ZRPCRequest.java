@@ -27,9 +27,12 @@ public class ZRPCRequest {
     @AllArgsConstructor
     @EqualsAndHashCode
     public static class Argument {
-        private Boolean isList = false;
         private String listClassName = "";
         private String typeClassName = "";
         private Object object = null;
+
+        public Boolean getIsList() {
+            return this.listClassName != null && !this.listClassName.isEmpty();
+        }
     }
 }

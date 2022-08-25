@@ -83,29 +83,35 @@ public class RemoteServiceProxy<T> implements InvocationHandler {
                 ParameterizedType parameterizedType = (ParameterizedType) method.getParameters()[i].getParameterizedType();
                 findTypeName = parameterizedType.getActualTypeArguments()[0].getTypeName();
                 argument.setListClassName(method.getParameters()[i].getType().getName());
-                argument.setIsList(true);
             } else {
                 // 对象类型
                 findTypeName = argValue.getClass().getTypeName();
-                argument.setIsList(false);
             }
 
-            // 找到匹配的注解则使用注解的映射, 没找到用默认的class类型
-            Optional<ZRPCSerializeBinder> serializer = Arrays.stream(annotations)
-                    .filter(a -> a.currentClass().getTypeName().equals(findTypeName))
-                    .findFirst();
-            String className = serializer.isPresent() ? serializer.get().remoteClassName() : argValue.getClass().getName();
-            argument.setTypeClassName(className);
+            String argClassName = this.getArgClassName(argValue, findTypeName, annotations);
+            argument.setTypeClassName(argClassName);
 
-            if (String.class.getTypeName().equals(className)) {
-                argument.setObject(argValue);
-            } else {
-                argument.setObject(ZRPCSerialization.toJSONString(argValue));
-            }
+            Object val = this.convertArgValue(argValue, argClassName);
+            argument.setObject(val);
 
             argumentList.add(argument);
         }
         return argumentList;
+    }
+
+    private String getArgClassName(Object argValue, String findTypeName, ZRPCSerializeBinder[] annotations) {
+        // 找到匹配的注解则使用注解的映射, 没找到用默认的class类型
+        Optional<ZRPCSerializeBinder> serializer = Arrays.stream(annotations)
+                .filter(a -> a.currentClass().getTypeName().equals(findTypeName))
+                .findFirst();
+        return serializer.isPresent() ? serializer.get().remoteClassName() : argValue.getClass().getName();
+    }
+
+    private Object convertArgValue(Object argValue, String className) {
+        if (String.class.getTypeName().equals(className)) {
+            return argValue;
+        }
+        return ZRPCSerialization.toJSONString(argValue);
     }
 
     private void checkResultSuccess(ZRPCResponse result, ZRPCThrowableBinder annotation) throws Throwable {
