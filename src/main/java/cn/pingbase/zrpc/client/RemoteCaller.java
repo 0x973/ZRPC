@@ -80,21 +80,26 @@ public class RemoteCaller implements ApplicationContextAware {
         ZRPCSocketConfig socketConfig = this.getZRPConfig().getSocket();
         if (this.lastSocketConfig == null || !this.lastSocketConfig.equals(socketConfig)) {
             this.lastSocketConfig = socketConfig;
-            this.httpClient = this.newHttpClient(socketConfig);
+            this.prepareHttpClient(socketConfig);
         }
 
         return this.httpClient;
     }
 
-    private OkHttpClient newHttpClient(ZRPCSocketConfig socketConfig) {
-        ConnectionPool connectionPool = new ConnectionPool(socketConfig.getMaxIdleConnections(), socketConfig.getKeepAliveDurationInMin(), TimeUnit.MINUTES);
-
-        return new OkHttpClient().newBuilder()
-                .connectTimeout(socketConfig.getConnectTimeoutInMs(), TimeUnit.MILLISECONDS)
-                .readTimeout(socketConfig.getReadTimeoutInMs(), TimeUnit.MILLISECONDS)
-                .writeTimeout(socketConfig.getWriteTimeoutInMs(), TimeUnit.MILLISECONDS)
-                .connectionPool(connectionPool)
-                .build();
+    private void prepareHttpClient(ZRPCSocketConfig socketConfig) {
+        synchronized (this) {
+            if (this.httpClient != null) {
+                return;
+            }
+            
+            ConnectionPool connectionPool = new ConnectionPool(socketConfig.getMaxIdleConnections(), socketConfig.getKeepAliveDurationInMin(), TimeUnit.MINUTES);
+            this.httpClient = new OkHttpClient().newBuilder()
+                    .connectTimeout(socketConfig.getConnectTimeoutInMs(), TimeUnit.MILLISECONDS)
+                    .readTimeout(socketConfig.getReadTimeoutInMs(), TimeUnit.MILLISECONDS)
+                    .writeTimeout(socketConfig.getWriteTimeoutInMs(), TimeUnit.MILLISECONDS)
+                    .connectionPool(connectionPool)
+                    .build();
+        }
     }
 
     private ZRPCConfig getZRPConfig() {
