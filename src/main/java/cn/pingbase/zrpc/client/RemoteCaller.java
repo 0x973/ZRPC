@@ -88,10 +88,6 @@ public class RemoteCaller implements ApplicationContextAware {
 
     private void prepareHttpClient(ZRPCSocketConfig socketConfig) {
         synchronized (this) {
-            if (this.httpClient != null) {
-                return;
-            }
-            
             ConnectionPool connectionPool = new ConnectionPool(socketConfig.getMaxIdleConnections(), socketConfig.getKeepAliveDurationInMin(), TimeUnit.MINUTES);
             this.httpClient = new OkHttpClient().newBuilder()
                     .connectTimeout(socketConfig.getConnectTimeoutInMs(), TimeUnit.MILLISECONDS)
