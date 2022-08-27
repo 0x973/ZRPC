@@ -9,7 +9,7 @@ ZRPC: 是一个基于Spring的轻量RPC(Remote Procedure Call)框架, 可以提�
     ```xml
     <dependency>
       <groupId>cn.pingbase.zrpc</groupId>
-      <artifactId>core</artifactId>
+      <artifactId>zrpc-core</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>
     ```
