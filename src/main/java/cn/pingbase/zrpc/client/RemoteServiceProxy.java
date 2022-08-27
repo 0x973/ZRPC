@@ -127,12 +127,17 @@ public class RemoteServiceProxy<T> implements InvocationHandler {
             throw new ZRPCException(result.getMessage());
         }
 
-        if (annotation != null) {
-            Class<? extends Throwable> exceptionClass = annotation.exceptionClass();
-            throw exceptionClass.getConstructor(String.class).newInstance(result.getMessage());
+        if (annotation == null) {
+            throw new ZRPCBusinessException(result.getMessage());
         }
 
-        throw new ZRPCBusinessException(result.getMessage());
+        Class<? extends Throwable> exceptionClass = annotation.exceptionClass();
+        try {
+            Constructor<? extends Throwable> classConstructor = exceptionClass.getConstructor(String.class);
+            throw classConstructor.newInstance(result.getMessage());
+        } catch (NoSuchMethodException e) {
+            throw new ZRPCException("Can not found constructor(String message) method for " + exceptionClass.getSimpleName(), e);
+        }
     }
 
     private Class<?> getSerializerClass(ZRPCSerializeBinder[] serializerAnnotations, String resultType) throws ClassNotFoundException {
