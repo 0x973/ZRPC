@@ -32,8 +32,8 @@ public class RemoteCaller implements ApplicationContextAware {
     private static final String ZRPC_CONTROLLER_PATH = "/zrpc";
     private static ApplicationContext applicationContext;
 
-    private ZRPCSocketConfig lastSocketConfig;
-    private OkHttpClient httpClient;
+    private volatile ZRPCSocketConfig lastSocketConfig;
+    private volatile OkHttpClient httpClient;
 
     public ZRPCResponse call(ZRPCRequest request) throws ZRPCException {
         ZRPCConfig.RemoteConfig remoteConfig = this.getZRPConfig().getRemoteConfig(request.getServerName());
@@ -79,14 +79,15 @@ public class RemoteCaller implements ApplicationContextAware {
     private OkHttpClient getHttpClient() {
         ZRPCSocketConfig socketConfig = this.getZRPConfig().getSocket();
         if (this.lastSocketConfig == null || !this.lastSocketConfig.equals(socketConfig)) {
-            this.lastSocketConfig = socketConfig;
             this.prepareHttpClient(socketConfig);
+            this.lastSocketConfig = socketConfig;
         }
 
         return this.httpClient;
     }
 
     private void prepareHttpClient(ZRPCSocketConfig socketConfig) {
+        // In extreme cases, there may be cases where it is initialized twice.
         synchronized (this) {
             ConnectionPool connectionPool = new ConnectionPool(socketConfig.getMaxIdleConnections(), socketConfig.getKeepAliveDurationInMin(), TimeUnit.MINUTES);
             this.httpClient = new OkHttpClient().newBuilder()
