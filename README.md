@@ -1,5 +1,6 @@
 # ZRPC(远程过程调用)框架文档
     Ver: 1.0 | Updated: 2022.08.31 | @Zak
+
 ### 介绍
 ZRPC：一个基于Spring的轻量RPC(Remote Procedure Call)框架，解决多服务之间的远程函数调用。
 ##### ✅ 配置简单，最小场景下只需要配置两处注解和一个配置文件。
@@ -10,9 +11,15 @@ ZRPC：一个基于Spring的轻量RPC(Remote Procedure Call)框架，解决多�
 ##### ✅ 可解决调用方/提供方不同位置模型的序列化问题（序列化映射）。
 ##### ✅ 可自定义返回异常类型，在提供方返回业务异常时调用方也会抛出指定的异常类型。
 ##### ✅ 可自定义socket、连接池配置，满足不同业务场景下的性能调优。
+##### ⚠️ 提供方的 Spring Bean 对象必须为 Spring 统一管理的单例模式，其他模式有风险，使用请注意。
 ##### ❌ 负载均衡、流量控制等能力目前需要依靠外部组件，在k8s环境下可直接利用k8s service等能力来实现。
 
+---
+
 ![框架实现原理](images/RPC.jpeg)
+
+---
+
 ### 基础使用
 
 1. 在Maven Java项目pom.xml中(调用方&提供方都需要添加此依赖)
@@ -58,14 +65,16 @@ ZRPC：一个基于Spring的轻量RPC(Remote Procedure Call)框架，解决多�
    ```
 4. 在调用方的接口类（interface）上注解:
     ```java
-    // 注解中的serverName值必须和配置中的serverName值一致
-    // 注解中的serviceIdentifier值必须和提供方@ZRPCRemoteService注解的serviceIdentifier值一致
+    // serverName值和serviceIdentifier值必须在服务层面全局唯一。
+    // serverName值必须和配置中的serverName值一致。
+    // serviceIdentifier值必须和提供方@ZRPCRemoteService注解的serviceIdentifier值一致。
     @ZRPCRemoteClient(serverName = "ServerA", serviceIdentifier = "TestService")
     ```
 5. 在提供方的接口类/实现类（interface/class）上注解:
    ```java
-   // 注解中的serviceIdentifier值必须和调用方@ZRPCRemoteClient注解的serviceIdentifier值一致
-   // serviceImplClass: 可选，用于包含多个实现类时指定当前接口具体的实现类
+   // serviceIdentifier值必须在服务层面全局唯一。
+   // serviceIdentifier值必须和调用方@ZRPCRemoteClient注解的serviceIdentifier值一致。
+   // serviceImplClass: 可选，用于拥有多个实现类时指定RPC调用接口使用哪个具体实现类。
    @ZRPCRemoteService(serviceIdentifier = "TestService", serviceImplClass = xxxx.class)
    ```
 6. 调用接口
@@ -75,9 +84,10 @@ ZRPC：一个基于Spring的轻量RPC(Remote Procedure Call)框架，解决多�
     
     testService.test();
     ```
+
 ---
 
-### 高级使用
+### 高级配置
 
 #### 1. 自定义序列化类型
 
@@ -97,6 +107,7 @@ List<TestModel> getTestModel(Body body);
 })
 TestModel getTestModel(Body body);
 ```
+以上两种注解方式都可以实现一样的功能。
 
 #### 2. 自定义业务异常
 
@@ -108,7 +119,7 @@ void check();
 ```
 *注意: 自定义的`CustomException`必须继承Exception/RuntimeException/Throwable并实现单个String类型入参的构造函数!*
 
-#### 3. RPC框架socket参数
+#### 3. RPC框架socket，连接池参数
 ZRPC框架支持调整socket参数，当前默认参数及含义:
 ```yaml
 # 连接超时时间(单位: 毫秒)
@@ -120,10 +131,10 @@ readTimeoutInMs: 500
 # 写超时时间(单位: 毫秒)
 writeTimeoutInMs: 500
 
-# 最大闲置连接数
+# 连接池最大闲置连接数量
 maxIdleConnections: 50
 
-# 闲置连接数最长保活时间(单位: 分钟)
+# 连接池闲置连接最长保活时间(单位: 分钟)
 keepAliveDurationInMin: 5
 ```
 完整配置示例:
