@@ -5,7 +5,7 @@ ZRPC：一个基于Spring的轻量RPC(Remote Procedure Call)框架，解决多�
 ##### ✅ 配置简单，最小场景下只需要配置两处注解和一个配置文件。
 ##### ✅ 对业务代码无侵入，不需要改动任何业务逻辑代码。
 ##### ✅ 轻量级，无过多依赖，不依赖外部组件。
-##### ✅ 支持不同多服务端调用。
+##### ✅ 支持不同多提供方调用。
 ##### ✅ 支持既是 调用方 同时也是 提供方的场景。
 ##### ✅ 可解决调用方/提供方不同位置模型的序列化问题（序列化映射）。
 ##### ✅ 可自定义返回异常类型。
@@ -15,7 +15,7 @@ ZRPC：一个基于Spring的轻量RPC(Remote Procedure Call)框架，解决多�
 ![框架实现原理](images/RPC.jpeg)
 ### 基础使用
 
-1. 在Maven Java项目pom.xml中(客户端&服务端都需要添加依赖)
+1. 在Maven Java项目pom.xml中(调用方&提供方都需要添加此依赖)
     ```xml
     <dependency>
       <groupId>cn.pingbase.zrpc</groupId>
@@ -23,17 +23,17 @@ ZRPC：一个基于Spring的轻量RPC(Remote Procedure Call)框架，解决多�
       <version>1.0-SNAPSHOT</version>
     </dependency>
     ```
-2. 配置(仅需要在客户端配置，服务端不需要加配置)
+2. 配置(仅需要在调用方配置，提供方不需要加配置)
     ```yaml
     # 1)简单配置
     zrpc:
         remotes:
-        - serverName: ServerA   # 必填! 这个名字下面客户端注解需要用
+        - serverName: ServerA   # 必填! 这个名字下面调用方注解需要用
           schema: http          # http/https
-          endpoint: 127.0.0.1   # 必填! 目标服务端地址(在k8s环境中可以配置service name)
-          port: 8080            # 必填! 必须和目标服务端的server.port值一致
+          endpoint: 127.0.0.1   # 必填! 目标提供方地址(在k8s环境中可以配置service name)
+          port: 8080            # 必填! 必须和目标提供方的server.port值一致
     
-    # 2)多个远程服务端
+    # 2)多个远程提供方
     zrpc:
         remotes:
         - serverName: ServerA
@@ -45,7 +45,7 @@ ZRPC：一个基于Spring的轻量RPC(Remote Procedure Call)框架，解决多�
           endpoint: 127.0.0.1
           port: 9090
     ```
-3. 在客户端和服务端的启动类上注解(`@ZRPCPackageScan`注解非必须，但建议配置，这有助于加快扫描速度以及注册准确度。)
+3. 在调用方和提供方的启动类上注解(`@ZRPCPackageScan`非必须，但建议配置上，因为这有助于加快扫描速度以及注册的准确度。)
    ```java
    @SpringBootApplication                              // 必须
    @ComponentScan(basePackages = {"cn.pingbase.zrpc"}) // 必须
@@ -56,15 +56,15 @@ ZRPC：一个基于Spring的轻量RPC(Remote Procedure Call)框架，解决多�
      }
    }
    ```
-4. 在客户端的接口类（interface）上注解:
+4. 在调用方的接口类（interface）上注解:
     ```java
     // 注解中的serverName值必须和配置中的serverName值一致
-    // 注解中的serviceIdentifier值必须和服务端@ZRPCRemoteService注解的serviceIdentifier值一致
+    // 注解中的serviceIdentifier值必须和提供方@ZRPCRemoteService注解的serviceIdentifier值一致
     @ZRPCRemoteClient(serverName = "ServerA", serviceIdentifier = "TestService")
     ```
-5. 在服务端的接口类/实现类（interface/class）上注解:
+5. 在提供方的接口类/实现类（interface/class）上注解:
    ```java
-   // 注解中的serviceIdentifier值必须和客户端@ZRPCRemoteClient注解的serviceIdentifier值一致
+   // 注解中的serviceIdentifier值必须和调用方@ZRPCRemoteClient注解的serviceIdentifier值一致
    // serviceImplClass: 可选，用于包含多个实现类时指定当前接口具体的实现类
    @ZRPCRemoteService(serviceIdentifier = "TestService", serviceImplClass = xxxx.class)
    ```
@@ -82,7 +82,7 @@ ZRPC：一个基于Spring的轻量RPC(Remote Procedure Call)框架，解决多�
 #### 1. 自定义序列化类型
 
 当远程函数的返回值/参数值为自定义类型，RPC过程中的序列化会是一个问题
-ZRPC为了解决这个问题进行了类型自动映射，使用者仅需要在客户端的interface中具体函数上注解`@ZRPCSerializeBinder`，例如:
+ZRPC为了解决这个问题进行了类型自动映射，使用者仅需要在调用方的interface中具体函数上注解`@ZRPCSerializeBinder`，例如:
 
 ```java
 @ZRPCSerializeBinder(remoteClassName = "com.xxx.remote.model.TestModel", currentClass = TestModel.class)
@@ -100,8 +100,8 @@ TestModel getTestModel(Body body);
 
 #### 2. 自定义业务异常
 
-当远程函数的执行出现业务的异常(逻辑代码主动抛出的异常)，默认RPC客户端收到的异常类型为`ZRPCBusinessException`
-某些场景RPC客户端需要根据特定的异常类型进行逻辑处理，使用者仅需要在客户端的interface中具体函数上注解`@ZRPCThrowableBinder`即可自定义业务异常类型(异常中的`message`字段已赋值为服务端抛异常时的值)
+当远程函数的执行出现业务的异常(逻辑代码主动抛出的异常)，默认RPC调用方收到的异常类型为`ZRPCBusinessException`
+某些场景RPC调用方需要根据特定的异常类型进行逻辑处理，使用者仅需要在调用方的interface中具体函数上注解`@ZRPCThrowableBinder`即可自定义业务异常类型(异常中的`message`字段已赋值为提供方抛异常时的值)
 ```java
 @ZRPCThrowableBinder(exceptionClass = CustomException.class)
 void check();
