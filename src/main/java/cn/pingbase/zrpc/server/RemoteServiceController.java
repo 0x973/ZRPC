@@ -38,7 +38,7 @@ public class RemoteServiceController {
 
         String identifier = request.getIdentifier();
         String methodName = request.getMethodName();
-        Object beanObject = RemoteServiceBeanStore.getServiceBean(identifier);
+        Object beanObject = RemoteServiceBeanStore.get(identifier);
         if (beanObject == null) {
             return ZRPCResponse.makeFailResult("Target bean could not found, identifier: " + identifier);
         }

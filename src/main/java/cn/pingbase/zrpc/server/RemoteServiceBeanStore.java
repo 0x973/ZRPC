@@ -11,15 +11,19 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RemoteServiceBeanStore {
     private static final Map<String, Object> serviceBeans = new ConcurrentHashMap<>();
 
-    public static boolean containsServiceBean(String serviceIdentifier) {
+    public static boolean contains(String serviceIdentifier) {
         return serviceBeans.containsKey(serviceIdentifier);
     }
 
-    public static void putServiceBean(String serviceIdentifier, Object bean) {
+    public static void put(String serviceIdentifier, Object bean) {
         serviceBeans.put(serviceIdentifier, bean);
     }
 
-    public static Object getServiceBean(String serviceIdentifier) {
+    public static Object get(String serviceIdentifier) {
         return serviceBeans.get(serviceIdentifier);
+    }
+
+    public static Map<String, Object> getCopyMap() {
+        return new ConcurrentHashMap<>(serviceBeans);
     }
 }

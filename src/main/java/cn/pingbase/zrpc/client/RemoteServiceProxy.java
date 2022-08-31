@@ -79,12 +79,12 @@ public class RemoteServiceProxy<T> implements InvocationHandler {
             ZRPCRequest.Argument argument = new ZRPCRequest.Argument();
             final String findTypeName;
             if (AbstractList.class.equals(argValue.getClass().getSuperclass())) {
-                // 集合类型
+                // Collection
                 ParameterizedType parameterizedType = (ParameterizedType) method.getParameters()[i].getParameterizedType();
                 findTypeName = parameterizedType.getActualTypeArguments()[0].getTypeName();
                 argument.setListClassName(method.getParameters()[i].getType().getName());
             } else {
-                // 对象类型
+                // Object
                 findTypeName = argValue.getClass().getTypeName();
             }
 
@@ -100,7 +100,8 @@ public class RemoteServiceProxy<T> implements InvocationHandler {
     }
 
     private String getArgClassName(Object argValue, String findTypeName, ZRPCSerializeBinder[] annotations) {
-        // 找到匹配的注解则使用注解的映射, 没找到用默认的class类型
+        // If a matching annotation is found, use it remoteClassName
+        // Otherwise, use argValue class name by default.
         Optional<ZRPCSerializeBinder> serializer = Arrays.stream(annotations)
                 .filter(a -> a.currentClass().getTypeName().equals(findTypeName))
                 .findFirst();

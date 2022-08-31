@@ -51,7 +51,7 @@ public class RemoteServiceBeanRegistry implements ApplicationContextAware {
     private static void registryClassToBeanStore(Class<?> clazz) {
         ZRPCRemoteService remoteServiceAnnotation = clazz.getDeclaredAnnotation(ZRPCRemoteService.class);
         String serviceIdentifier = remoteServiceAnnotation.serviceIdentifier();
-        if (RemoteServiceBeanStore.containsServiceBean(serviceIdentifier)) {
+        if (RemoteServiceBeanStore.contains(serviceIdentifier)) {
             log.warn("The same serviceIdentifier for serviceBean already exists.");
             return;
         }
@@ -59,14 +59,16 @@ public class RemoteServiceBeanRegistry implements ApplicationContextAware {
         Class<?> serviceImplClass = remoteServiceAnnotation.serviceImplClass();
         Object bean;
         if (!Class.class.equals(serviceImplClass)) {
-            // 用户配置了实现类, 寻找对应的具体实现类的bean
+            // The implementation class is configured in the annotation.
             bean = RemoteServiceBeanRegistry.context.getBean(serviceImplClass);
         } else {
-            // 用户未配置具体实现类, 根据当前注解所在的class获取bean
+            // Get the bean based on the class where the annotation is located.
             bean = RemoteServiceBeanRegistry.context.getBean(clazz);
         }
 
-        RemoteServiceBeanStore.putServiceBean(serviceIdentifier, bean);
+        RemoteServiceBeanStore.put(serviceIdentifier, bean);
+        log.info(String.format("Remote service bean registered successfully. %s -> %s", serviceIdentifier,
+                bean.getClass().getName()));
     }
 
     private List<Reflections> getZRPCPackageScanReflections() {
