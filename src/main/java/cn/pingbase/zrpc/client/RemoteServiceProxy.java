@@ -31,10 +31,6 @@ public class RemoteServiceProxy<T> implements InvocationHandler {
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         ZRPCRemoteClient remoteClientAnnotation = method.getDeclaringClass().getAnnotation(ZRPCRemoteClient.class);
-        if (remoteClientAnnotation == null) {
-            throw new ZRPCException("Annotation `ZRPCRemoteClient` configuration error.");
-        }
-
         String serverName = remoteClientAnnotation.serverName();
         String serviceIdentifier = remoteClientAnnotation.serviceIdentifier();
         if (!StringUtils.hasLength(serverName) || !StringUtils.hasLength(serviceIdentifier)) {
@@ -73,12 +69,18 @@ public class RemoteServiceProxy<T> implements InvocationHandler {
 
     private List<ZRPCRequest.Argument> makeArgumentList(Method method, Object[] args, ZRPCSerializeBinder[] annotations) {
         List<ZRPCRequest.Argument> argumentList = new ArrayList<>();
+        if (args == null) {
+            return argumentList;
+        }
+
         for (int i = 0; i < args.length; i++) {
             Object argValue = args[i];
-
             ZRPCRequest.Argument argument = new ZRPCRequest.Argument();
+
             final String findTypeName;
-            if (AbstractList.class.equals(argValue.getClass().getSuperclass())) {
+            if (argValue == null) {
+                findTypeName = method.getParameters()[i].getType().getTypeName();
+            } else if (AbstractList.class.equals(argValue.getClass().getSuperclass())) {
                 // Collection
                 ParameterizedType parameterizedType = (ParameterizedType) method.getParameters()[i].getParameterizedType();
                 findTypeName = parameterizedType.getActualTypeArguments()[0].getTypeName();
@@ -100,6 +102,10 @@ public class RemoteServiceProxy<T> implements InvocationHandler {
     }
 
     private String getArgClassName(Object argValue, String findTypeName, ZRPCSerializeBinder[] annotations) {
+        if (argValue == null) {
+            return findTypeName;
+        }
+
         // If a matching annotation is found, use it remoteClassName
         // Otherwise, use argValue class name by default.
         Optional<ZRPCSerializeBinder> serializer = Arrays.stream(annotations)
@@ -109,7 +115,9 @@ public class RemoteServiceProxy<T> implements InvocationHandler {
     }
 
     private Object convertArgValue(Object argValue, String className) {
-        if (String.class.getTypeName().equals(className)) {
+        if (argValue == null) {
+            return null;
+        } else if (String.class.getTypeName().equals(className)) {
             return argValue;
         }
         return ZRPCSerialization.toJSONString(argValue);

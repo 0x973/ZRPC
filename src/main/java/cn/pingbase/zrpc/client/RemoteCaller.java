@@ -38,7 +38,7 @@ public class RemoteCaller implements ApplicationContextAware {
     public ZRPCResponse call(ZRPCRequest request) throws ZRPCException {
         ZRPCConfig.RemoteConfig remoteConfig = this.getZRPConfig().getRemoteConfig(request.getServerName());
         if (remoteConfig == null) {
-            throw new ZRPCException("Server can not found in remote config.");
+            throw new ZRPCException("Could not find server name in zrpc remote config, name: " + request.getServerName());
         }
 
         try {

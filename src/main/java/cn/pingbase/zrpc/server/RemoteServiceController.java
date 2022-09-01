@@ -12,10 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.*;
 import java.util.*;
 
 /**
@@ -30,17 +27,17 @@ public class RemoteServiceController {
     private static final String MEDIA_TYPE_JSON = "application/json;charset=utf-8";
 
     @PostMapping(value = "/zrpc", produces = MEDIA_TYPE_JSON, consumes = MEDIA_TYPE_JSON)
-    public ZRPCResponse zrpcMain(@RequestHeader(HttpHeaders.USER_AGENT) String userAgent,
-                                 @RequestBody ZRPCRequest request) {
+    public ZRPCResponse zrpcMain(@RequestHeader(HttpHeaders.USER_AGENT) String userAgent, @RequestBody ZRPCRequest request) {
         if (!StringUtils.hasLength(userAgent) || !ZRPConstants.REMOTE_CALLER_USERAGENT.equals(userAgent)) {
-            return null;
+            return ZRPCResponse.makeFailResult("Your request was denied.");
         }
 
         String identifier = request.getIdentifier();
         String methodName = request.getMethodName();
         Object beanObject = RemoteServiceBeanStore.get(identifier);
         if (beanObject == null) {
-            return ZRPCResponse.makeFailResult("Target bean could not found, identifier: " + identifier);
+            String reason = String.format("Remote: [target bean could not found, service identifier: %s].", identifier);
+            return ZRPCResponse.makeFailResult(reason);
         }
 
         return this.invoke(beanObject, methodName, request.getArgs());
@@ -49,37 +46,42 @@ public class RemoteServiceController {
     private ZRPCResponse invoke(Object beanObject, String methodName, List<ZRPCRequest.Argument> args) {
         try {
             Class<?>[] argClassArray = this.convertArgClass(args);
-            Method method = beanObject.getClass().getMethod(methodName, argClassArray);
-
-            Class<?> returnType = method.getReturnType();
-            String returnTypeName = returnType.getName();
-
-            boolean isList = false;
-            if (returnType.equals(List.class) || returnType.equals(ArrayList.class) || returnType.equals(Array.class)) {
-                returnTypeName = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0].getTypeName();
-                isList = true;
-            }
-
             Object[] argValueArray = this.getArgValueArray(args);
+            Method method = beanObject.getClass().getMethod(methodName, argClassArray);
             try {
                 Object result = method.invoke(beanObject, argValueArray);
-                if (isList) {
-                    return ZRPCResponse.makeSuccessListResult(returnTypeName, ZRPCSerialization.toJSONString(result));
-                }
-                return ZRPCResponse.makeSuccessResult(returnTypeName, ZRPCSerialization.toJSONString(result));
-            } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-                log.error("ZRPC method call exception", e);
-                return ZRPCResponse.makeFailResult("Server call method exception.");
-            } catch (Exception businessEx) {
-                return ZRPCResponse.makeFailResult(businessEx.getMessage(), true);
+                return this.makeResponse(method.getReturnType(), method.getGenericReturnType(), result);
+            } catch (InvocationTargetException e) {
+                return ZRPCResponse.makeFailResult(e.getTargetException().getMessage(), true);
             }
-
         } catch (NoSuchMethodException e) {
             return ZRPCResponse.makeFailResult("Service method not found, please check your interface class.");
         } catch (Exception e) {
             log.warn("ZRPC Remote call exception.", e);
             return ZRPCResponse.makeFailResult("Server parsing error, message: " + e.getMessage());
         }
+    }
+
+    private ZRPCResponse makeResponse(Class<?> returnType, Type genericReturnType, Object result) {
+        String returnTypeName = returnType.getName();
+        boolean isList = false;
+
+        if (isArrayOrList(returnType)) {
+            returnTypeName = ((ParameterizedType) genericReturnType).getActualTypeArguments()[0].getTypeName();
+            isList = true;
+        }
+
+        if (result == null) {
+            return ZRPCResponse.makeSuccessResult(returnTypeName, null);
+        } else if (isList) {
+            return ZRPCResponse.makeSuccessListResult(returnTypeName, ZRPCSerialization.toJSONString(result));
+        } else {
+            return ZRPCResponse.makeSuccessResult(returnTypeName, ZRPCSerialization.toJSONString(result));
+        }
+    }
+
+    private boolean isArrayOrList(Class<?> clazz) {
+        return clazz.equals(List.class) || clazz.equals(ArrayList.class) || clazz.equals(Array.class);
     }
 
     private Object[] getArgValueArray(List<ZRPCRequest.Argument> args) throws ClassNotFoundException {
@@ -89,7 +91,9 @@ public class RemoteServiceController {
             ZRPCRequest.Argument argument = args.get(i);
             Object object = argument.getObject();
             String typeClassName = argument.getTypeClassName();
-            if (String.class.getTypeName().equals(typeClassName)) {
+            if (object == null) {
+                argValueArray[i] = null;
+            } else if (String.class.getTypeName().equals(typeClassName)) {
                 argValueArray[i] = object;
             } else if (argument.getIsList()) {
                 argValueArray[i] = ZRPCSerialization.parseArray((String) object, Class.forName(typeClassName));
