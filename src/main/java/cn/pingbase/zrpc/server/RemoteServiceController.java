@@ -45,11 +45,11 @@ public class RemoteServiceController {
 
     private ZRPCResponse invoke(Object beanObject, String methodName, List<ZRPCRequest.Argument> args) {
         try {
-            Class<?>[] argClassArray = this.convertArgClass(args);
-            Object[] argValueArray = this.getArgValueArray(args);
-            Method method = beanObject.getClass().getMethod(methodName, argClassArray);
+            Class<?>[] argTypes = this.convertArgClass(args);
+            Object[] argValues = this.getArgValueArray(args);
+            Method method = beanObject.getClass().getMethod(methodName, argTypes);
             try {
-                Object result = method.invoke(beanObject, argValueArray);
+                Object result = method.invoke(beanObject, argValues);
                 return this.makeResponse(method.getReturnType(), method.getGenericReturnType(), result);
             } catch (InvocationTargetException e) {
                 return ZRPCResponse.makeFailResult(e.getTargetException().getMessage(), true);
