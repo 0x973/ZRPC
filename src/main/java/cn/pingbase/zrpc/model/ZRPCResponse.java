@@ -16,23 +16,50 @@ public class ZRPCResponse {
     private boolean success;
     private boolean isBusinessException;
     private boolean isList;
+    private boolean isSet;
+    private String collectionType;
     private String resultType;
-    private String resultValue;
+    private String resultJsonValue;
     private String message;
 
-    public static ZRPCResponse makeSuccessResult(String resultType, String resultValue) {
-        return new ZRPCResponse(true, false, false, resultType, resultValue, "success");
+    public static ZRPCResponse makeSuccessResult(String resultType, String resultJsonValue) {
+        ZRPCResponse response = new ZRPCResponse();
+        response.setSuccess(true);
+        response.setResultType(resultType);
+        response.setResultJsonValue(resultJsonValue);
+        return response;
     }
 
-    public static ZRPCResponse makeSuccessListResult(String resultType, String resultValue) {
-        return new ZRPCResponse(true, false, true, resultType, resultValue, "success");
+    public static ZRPCResponse makeSuccessListResult(String collectionType, String elementType, String resultJsonValue) {
+        ZRPCResponse response = new ZRPCResponse();
+        response.setSuccess(true);
+        response.setList(true);
+        response.setCollectionType(collectionType);
+        response.setResultType(elementType);
+        response.setResultJsonValue(resultJsonValue);
+        return response;
+    }
+
+    public static ZRPCResponse makeSuccessSetResult(String collectionType, String elementType, String resultJsonValue) {
+        ZRPCResponse response = new ZRPCResponse();
+        response.setSuccess(true);
+        response.setSet(true);
+        response.setCollectionType(collectionType);
+        response.setResultType(elementType);
+        response.setResultJsonValue(resultJsonValue);
+        return response;
     }
 
     public static ZRPCResponse makeFailResult(String reason) {
-        return new ZRPCResponse(false, false, false, null, null, reason);
+        ZRPCResponse response = new ZRPCResponse();
+        response.setMessage(reason);
+        return response;
     }
 
-    public static ZRPCResponse makeFailResult(String reason, boolean isBusinessException) {
-        return new ZRPCResponse(false, isBusinessException, false, null, null, reason);
+    public static ZRPCResponse makeBusinessFailResult(String reason) {
+        ZRPCResponse response = new ZRPCResponse();
+        response.setMessage(reason);
+        response.setBusinessException(true);
+        return response;
     }
 }

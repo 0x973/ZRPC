@@ -4,6 +4,8 @@ import cn.pingbase.zrpc.consts.ZRPConstants;
 import cn.pingbase.zrpc.model.ZRPCRequest;
 import cn.pingbase.zrpc.model.ZRPCResponse;
 import cn.pingbase.zrpc.serialization.ZRPCSerialization;
+import cn.pingbase.zrpc.util.ListUtil;
+import cn.pingbase.zrpc.util.SetUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.util.StringUtils;
@@ -52,7 +54,7 @@ public class RemoteServiceController {
                 Object result = method.invoke(beanObject, argValues);
                 return this.makeResponse(method.getReturnType(), method.getGenericReturnType(), result);
             } catch (InvocationTargetException e) {
-                return ZRPCResponse.makeFailResult(e.getTargetException().getMessage(), true);
+                return ZRPCResponse.makeBusinessFailResult(e.getTargetException().getMessage());
             }
         } catch (NoSuchMethodException e) {
             return ZRPCResponse.makeFailResult("Service method not found, please check your interface class.");
@@ -64,24 +66,26 @@ public class RemoteServiceController {
 
     private ZRPCResponse makeResponse(Class<?> returnType, Type genericReturnType, Object result) {
         String returnTypeName = returnType.getName();
-        boolean isList = false;
+        boolean isListType = false;
+        boolean isSetType = false;
 
-        if (isArrayOrList(returnType)) {
-            returnTypeName = ((ParameterizedType) genericReturnType).getActualTypeArguments()[0].getTypeName();
-            isList = true;
+        String elementType = null;
+        if (ListUtil.isArrayOrList(returnType)) {
+            elementType = ((ParameterizedType) genericReturnType).getActualTypeArguments()[0].getTypeName();
+            isListType = true;
+        } else if (SetUtil.isSet(returnType)) {
+            elementType = ((ParameterizedType) genericReturnType).getActualTypeArguments()[0].getTypeName();
+            isSetType = true;
         }
 
         if (result == null) {
             return ZRPCResponse.makeSuccessResult(returnTypeName, null);
-        } else if (isList) {
-            return ZRPCResponse.makeSuccessListResult(returnTypeName, ZRPCSerialization.toJSONString(result));
-        } else {
-            return ZRPCResponse.makeSuccessResult(returnTypeName, ZRPCSerialization.toJSONString(result));
+        } else if (isListType) {
+            return ZRPCResponse.makeSuccessListResult(returnTypeName, elementType, ZRPCSerialization.toJSONString(result));
+        } else if (isSetType) {
+            return ZRPCResponse.makeSuccessSetResult(returnTypeName, elementType, ZRPCSerialization.toJSONString(result));
         }
-    }
-
-    private boolean isArrayOrList(Class<?> clazz) {
-        return clazz.equals(List.class) || clazz.equals(ArrayList.class) || clazz.equals(Array.class);
+        return ZRPCResponse.makeSuccessResult(returnTypeName, ZRPCSerialization.toJSONString(result));
     }
 
     private Object[] getArgValueArray(List<ZRPCRequest.Argument> args) throws ClassNotFoundException {

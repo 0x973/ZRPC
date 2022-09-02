@@ -47,9 +47,13 @@ public class RemoteServiceProxy<T> implements InvocationHandler {
         try {
             Class<?> clazz = this.getSerializerClass(serializerAnnotations, result.getResultType());
             if (result.isList()) {
-                return ZRPCSerialization.parseArray(result.getResultValue(), clazz);
+                return ZRPCSerialization.parseArray(result.getResultJsonValue(), clazz);
+            } else if (result.isSet()) {
+                Class<?> setType = Class.forName(result.getCollectionType());
+                return ZRPCSerialization.parseSet(result.getResultJsonValue(), setType, clazz);
+            } else {
+                return ZRPCSerialization.parseObject(result.getResultJsonValue(), clazz);
             }
-            return ZRPCSerialization.parseObject(result.getResultValue(), clazz);
         } catch (ClassNotFoundException e) {
             throw new ZRPCException("Class not found, please check your package classes.", e);
         } catch (Exception e) {
