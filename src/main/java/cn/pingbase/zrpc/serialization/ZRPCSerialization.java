@@ -1,12 +1,9 @@
 package cn.pingbase.zrpc.serialization;
 
-import cn.pingbase.zrpc.util.SetUtil;
 import com.alibaba.fastjson2.JSON;
 
-import java.util.AbstractSet;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.lang.reflect.Array;
+import java.util.*;
 
 /**
  * @author: Zak
@@ -18,18 +15,33 @@ public class ZRPCSerialization {
         return JSON.parseObject(json, clazz);
     }
 
-    public static <T> List<T> parseArray(String json, Class<T> clazz) {
-        return JSON.parseArray(json, clazz);
+    @SuppressWarnings("unchecked")
+    public static <E> E[] parseArray(String json, Class<E> elementType) {
+        List<E> list = JSON.parseArray(json, elementType);
+        E[] array = (E[]) Array.newInstance(elementType, list.size());
+        return list.toArray(array);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <E> List<E> parseList(String json, Class<?> listType, Class<E> elementType) {
+        try {
+            if (!listType.isInterface()) {
+                Class<? extends AbstractList<E>> type = (Class<? extends AbstractList<E>>) listType;
+                AbstractList<E> list = type.newInstance();
+                list.addAll(JSON.parseArray(json, elementType));
+                return list;
+            }
+
+            return JSON.parseArray(json, elementType);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @SuppressWarnings("unchecked")
     public static <E> Set<E> parseSet(String json, Class<?> setType, Class<E> elementType) {
-        if (!SetUtil.isSet(setType)) {
-            return null;
-        }
-
         try {
-            if (!Set.class.equals(setType)) {
+            if (!setType.isInterface()) {
                 Class<? extends AbstractSet<E>> type = (Class<? extends AbstractSet<E>>) setType;
                 AbstractSet<E> set = type.newInstance();
                 set.addAll(JSON.parseArray(json, elementType));

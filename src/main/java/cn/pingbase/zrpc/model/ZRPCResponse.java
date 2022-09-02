@@ -15,9 +15,8 @@ import lombok.NoArgsConstructor;
 public class ZRPCResponse {
     private boolean success;
     private boolean isBusinessException;
-    private boolean isList;
-    private boolean isSet;
-    private String collectionType;
+    private ZRPCArgType argType = ZRPCArgType.NONE;
+    private String collectionTypeName;
     private String resultType;
     private String resultJsonValue;
     private String message;
@@ -30,21 +29,21 @@ public class ZRPCResponse {
         return response;
     }
 
-    public static ZRPCResponse makeSuccessListResult(String collectionType, String elementType, String resultJsonValue) {
+    public static ZRPCResponse makeSuccessListResult(String collectionTypeName, String elementType, String resultJsonValue) {
         ZRPCResponse response = new ZRPCResponse();
         response.setSuccess(true);
-        response.setList(true);
-        response.setCollectionType(collectionType);
+        response.setArgType(ZRPCArgType.LIST);
+        response.setCollectionTypeName(collectionTypeName);
         response.setResultType(elementType);
         response.setResultJsonValue(resultJsonValue);
         return response;
     }
 
-    public static ZRPCResponse makeSuccessSetResult(String collectionType, String elementType, String resultJsonValue) {
+    public static ZRPCResponse makeSuccessSetResult(String collectionTypeName, String elementType, String resultJsonValue) {
         ZRPCResponse response = new ZRPCResponse();
         response.setSuccess(true);
-        response.setSet(true);
-        response.setCollectionType(collectionType);
+        response.setArgType(ZRPCArgType.SET);
+        response.setCollectionTypeName(collectionTypeName);
         response.setResultType(elementType);
         response.setResultJsonValue(resultJsonValue);
         return response;
@@ -61,5 +60,13 @@ public class ZRPCResponse {
         response.setMessage(reason);
         response.setBusinessException(true);
         return response;
+    }
+
+    public boolean isList() {
+        return ZRPCArgType.LIST.equals(this.getArgType());
+    }
+
+    public boolean isSet() {
+        return ZRPCArgType.SET.equals(this.getArgType());
     }
 }

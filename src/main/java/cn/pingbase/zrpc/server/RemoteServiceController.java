@@ -4,8 +4,7 @@ import cn.pingbase.zrpc.consts.ZRPConstants;
 import cn.pingbase.zrpc.model.ZRPCRequest;
 import cn.pingbase.zrpc.model.ZRPCResponse;
 import cn.pingbase.zrpc.serialization.ZRPCSerialization;
-import cn.pingbase.zrpc.util.ListUtil;
-import cn.pingbase.zrpc.util.SetUtil;
+import cn.pingbase.zrpc.util.CollectionUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.util.StringUtils;
@@ -14,8 +13,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.lang.reflect.*;
-import java.util.*;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.List;
 
 /**
  * @author: Zak
@@ -50,12 +52,14 @@ public class RemoteServiceController {
             Class<?>[] argTypes = this.convertArgClass(args);
             Object[] argValues = this.getArgValueArray(args);
             Method method = beanObject.getClass().getMethod(methodName, argTypes);
+
             try {
                 Object result = method.invoke(beanObject, argValues);
                 return this.makeResponse(method.getReturnType(), method.getGenericReturnType(), result);
             } catch (InvocationTargetException e) {
                 return ZRPCResponse.makeBusinessFailResult(e.getTargetException().getMessage());
             }
+
         } catch (NoSuchMethodException e) {
             return ZRPCResponse.makeFailResult("Service method not found, please check your interface class.");
         } catch (Exception e) {
@@ -66,47 +70,55 @@ public class RemoteServiceController {
 
     private ZRPCResponse makeResponse(Class<?> returnType, Type genericReturnType, Object result) {
         String returnTypeName = returnType.getName();
-        boolean isListType = false;
-        boolean isSetType = false;
-
-        String elementType = null;
-        if (ListUtil.isArrayOrList(returnType)) {
-            elementType = ((ParameterizedType) genericReturnType).getActualTypeArguments()[0].getTypeName();
-            isListType = true;
-        } else if (SetUtil.isSet(returnType)) {
-            elementType = ((ParameterizedType) genericReturnType).getActualTypeArguments()[0].getTypeName();
-            isSetType = true;
-        }
-
         if (result == null) {
             return ZRPCResponse.makeSuccessResult(returnTypeName, null);
-        } else if (isListType) {
+
+        } else if (CollectionUtil.isList(returnType)) {
+            String elementType = ((ParameterizedType) genericReturnType).getActualTypeArguments()[0].getTypeName();
             return ZRPCResponse.makeSuccessListResult(returnTypeName, elementType, ZRPCSerialization.toJSONString(result));
-        } else if (isSetType) {
+
+        } else if (CollectionUtil.isSet(returnType)) {
+            String elementType = ((ParameterizedType) genericReturnType).getActualTypeArguments()[0].getTypeName();
             return ZRPCResponse.makeSuccessSetResult(returnTypeName, elementType, ZRPCSerialization.toJSONString(result));
+
+        } else {
+            return ZRPCResponse.makeSuccessResult(returnTypeName, ZRPCSerialization.toJSONString(result));
         }
-        return ZRPCResponse.makeSuccessResult(returnTypeName, ZRPCSerialization.toJSONString(result));
     }
 
     private Object[] getArgValueArray(List<ZRPCRequest.Argument> args) throws ClassNotFoundException {
         Object[] argValueArray = new Object[args.size()];
 
         for (int i = 0; i < args.size(); i++) {
-            ZRPCRequest.Argument argument = args.get(i);
-            Object object = argument.getObject();
-            String typeClassName = argument.getTypeClassName();
-            if (object == null) {
-                argValueArray[i] = null;
-            } else if (String.class.getTypeName().equals(typeClassName)) {
-                argValueArray[i] = object;
-            } else if (argument.getIsList()) {
-                argValueArray[i] = ZRPCSerialization.parseArray((String) object, Class.forName(typeClassName));
-            } else {
-                argValueArray[i] = ZRPCSerialization.parseObject((String) object, Class.forName(typeClassName));
-            }
+            argValueArray[i] = this.parseArgValue(args.get(i));
         }
 
         return argValueArray;
+    }
+
+    private Object parseArgValue(ZRPCRequest.Argument argument) throws ClassNotFoundException {
+        switch (argument.getArgType()) {
+            case NULL: {
+                return null;
+            }
+            case STRING: {
+                return argument.getObjectJson();
+            }
+            case LIST: {
+                Class<?> listClass = Class.forName(argument.getCollectionClassName());
+                Class<?> elementClass = Class.forName(argument.getTypeClassName());
+                return ZRPCSerialization.parseList(argument.getObjectJson(), listClass, elementClass);
+            }
+            case SET: {
+                Class<?> setClass = Class.forName(argument.getCollectionClassName());
+                Class<?> elementClass = Class.forName(argument.getTypeClassName());
+                return ZRPCSerialization.parseSet(argument.getObjectJson(), setClass, elementClass);
+            }
+            case OBJECT:
+            default: {
+                return ZRPCSerialization.parseObject(argument.getObjectJson(), Class.forName(argument.getTypeClassName()));
+            }
+        }
     }
 
     private Class<?>[] convertArgClass(List<ZRPCRequest.Argument> args) throws ClassNotFoundException {
@@ -116,12 +128,7 @@ public class RemoteServiceController {
 
         Class<?>[] argClasses = new Class<?>[args.size()];
         for (int i = 0; i < args.size(); i++) {
-            ZRPCRequest.Argument argument = args.get(i);
-            if (argument.getIsList()) {
-                argClasses[i] = Class.forName(argument.getListClassName());
-            } else {
-                argClasses[i] = Class.forName(argument.getTypeClassName());
-            }
+            argClasses[i] = Class.forName(args.get(i).getFormalTypeClassName());
         }
         return argClasses;
     }

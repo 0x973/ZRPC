@@ -1,5 +1,6 @@
 package cn.pingbase.zrpc.client;
 
+import cn.pingbase.zrpc.model.ZRPCArgType;
 import cn.pingbase.zrpc.serialization.ZRPCSerialization;
 import cn.pingbase.zrpc.annotation.ZRPCRemoteClient;
 import cn.pingbase.zrpc.annotation.ZRPCSerializeBinder;
@@ -8,6 +9,7 @@ import cn.pingbase.zrpc.exception.ZRPCBusinessException;
 import cn.pingbase.zrpc.model.ZRPCRequest;
 import cn.pingbase.zrpc.model.ZRPCResponse;
 import cn.pingbase.zrpc.exception.ZRPCException;
+import cn.pingbase.zrpc.util.CollectionUtil;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.*;
@@ -45,15 +47,17 @@ public class RemoteServiceProxy<T> implements InvocationHandler {
         this.checkResultSuccess(result, throwableBinderAnnotation);
 
         try {
-            Class<?> clazz = this.getSerializerClass(serializerAnnotations, result.getResultType());
+            Class<?> clazz = this.getDeSerializerClass(result.getResultType(), serializerAnnotations);
             if (result.isList()) {
-                return ZRPCSerialization.parseArray(result.getResultJsonValue(), clazz);
+                Class<?> listType = Class.forName(result.getCollectionTypeName());
+                return ZRPCSerialization.parseList(result.getResultJsonValue(), listType, clazz);
+
             } else if (result.isSet()) {
-                Class<?> setType = Class.forName(result.getCollectionType());
+                Class<?> setType = Class.forName(result.getCollectionTypeName());
                 return ZRPCSerialization.parseSet(result.getResultJsonValue(), setType, clazz);
-            } else {
-                return ZRPCSerialization.parseObject(result.getResultJsonValue(), clazz);
             }
+
+            return ZRPCSerialization.parseObject(result.getResultJsonValue(), clazz);
         } catch (ClassNotFoundException e) {
             throw new ZRPCException("Class not found, please check your package classes.", e);
         } catch (Exception e) {
@@ -61,73 +65,72 @@ public class RemoteServiceProxy<T> implements InvocationHandler {
         }
     }
 
-    private ZRPCRequest makeRequest(String serverName, String serviceIdentifier, Method method, Object[] args,
-                                    ZRPCSerializeBinder[] annotations) {
+    private ZRPCRequest makeRequest(String serverName, String serviceIdentifier, Method method, Object[] args, ZRPCSerializeBinder[] serializerBinders) {
         ZRPCRequest request = new ZRPCRequest();
         request.setServerName(serverName);
         request.setIdentifier(serviceIdentifier);
         request.setMethodName(method.getName());
-        request.setArgs(this.makeArgumentList(method, args, annotations));
+        request.setArgs(this.makeArgumentList(method, args, serializerBinders));
         return request;
     }
 
-    private List<ZRPCRequest.Argument> makeArgumentList(Method method, Object[] args, ZRPCSerializeBinder[] annotations) {
+    private List<ZRPCRequest.Argument> makeArgumentList(Method method, Object[] args, ZRPCSerializeBinder[] serializerBinders) {
         List<ZRPCRequest.Argument> argumentList = new ArrayList<>();
         if (args == null) {
             return argumentList;
         }
 
         for (int i = 0; i < args.length; i++) {
-            Object argValue = args[i];
-            ZRPCRequest.Argument argument = new ZRPCRequest.Argument();
-
-            final String findTypeName;
-            if (argValue == null) {
-                findTypeName = method.getParameters()[i].getType().getTypeName();
-            } else if (AbstractList.class.equals(argValue.getClass().getSuperclass())) {
-                // Collection
-                ParameterizedType parameterizedType = (ParameterizedType) method.getParameters()[i].getParameterizedType();
-                findTypeName = parameterizedType.getActualTypeArguments()[0].getTypeName();
-                argument.setListClassName(method.getParameters()[i].getType().getName());
-            } else {
-                // Object
-                findTypeName = argValue.getClass().getTypeName();
-            }
-
-            String argClassName = this.getArgClassName(argValue, findTypeName, annotations);
-            argument.setTypeClassName(argClassName);
-
-            Object val = this.convertArgValue(argValue, argClassName);
-            argument.setObject(val);
-
-            argumentList.add(argument);
+            argumentList.add(this.makeArgument(method, i, args[i], serializerBinders));
         }
         return argumentList;
     }
 
-    private String getArgClassName(Object argValue, String findTypeName, ZRPCSerializeBinder[] annotations) {
+    private ZRPCRequest.Argument makeArgument(Method method, int methodArgIndex, Object argValue, ZRPCSerializeBinder[] serializerBinders) {
+        ZRPCRequest.Argument argument = new ZRPCRequest.Argument();
+        String formalClassName = method.getParameters()[methodArgIndex].getType().getName();
+        argument.setFormalTypeClassName(this.getMappingArgClassName(formalClassName, serializerBinders));
+
         if (argValue == null) {
-            return findTypeName;
+            argument.setArgType(ZRPCArgType.NULL);
+            argument.setObjectJson(null);
+            return argument;
         }
 
-        // If a matching annotation is found, use it remoteClassName
-        // Otherwise, use argValue class name by default.
-        Optional<ZRPCSerializeBinder> serializer = Arrays.stream(annotations)
-                .filter(a -> a.currentClass().getTypeName().equals(findTypeName))
-                .findFirst();
-        return serializer.isPresent() ? serializer.get().remoteClassName() : argValue.getClass().getName();
-    }
-
-    private Object convertArgValue(Object argValue, String className) {
-        if (argValue == null) {
-            return null;
-        } else if (String.class.getTypeName().equals(className)) {
-            return argValue;
+        if (String.class.equals(argValue.getClass())) {
+            argument.setArgType(ZRPCArgType.STRING);
+            argument.setTypeClassName(String.class.getName());
+            argument.setObjectJson((String) argValue);
+            return argument;
         }
-        return ZRPCSerialization.toJSONString(argValue);
+
+        final String needMappingTypeName;
+        if (CollectionUtil.isList(argValue.getClass())) {
+            // List collection
+            ParameterizedType parameterizedType = (ParameterizedType) method.getParameters()[methodArgIndex].getParameterizedType();
+            needMappingTypeName = parameterizedType.getActualTypeArguments()[0].getTypeName();
+            argument.setArgType(ZRPCArgType.LIST);
+            argument.setCollectionClassName(argValue.getClass().getName());
+
+        } else if (CollectionUtil.isSet(argValue.getClass())) {
+            // Set collection
+            ParameterizedType parameterizedType = (ParameterizedType) method.getParameters()[methodArgIndex].getParameterizedType();
+            needMappingTypeName = parameterizedType.getActualTypeArguments()[0].getTypeName();
+            argument.setArgType(ZRPCArgType.SET);
+            argument.setCollectionClassName(argValue.getClass().getName());
+
+        } else {
+            // Object or Array ...
+            needMappingTypeName = argValue.getClass().getName();
+            argument.setArgType(ZRPCArgType.OBJECT);
+        }
+
+        argument.setTypeClassName(this.getMappingArgClassName(needMappingTypeName, serializerBinders));
+        argument.setObjectJson(ZRPCSerialization.toJSONString(argValue));
+        return argument;
     }
 
-    private void checkResultSuccess(ZRPCResponse result, ZRPCThrowableBinder annotation) throws Throwable {
+    private void checkResultSuccess(ZRPCResponse result, ZRPCThrowableBinder throwableBinder) throws Throwable {
         if (result == null) {
             throw new ZRPCException("Failed to call zrpc remote server.");
         }
@@ -140,11 +143,11 @@ public class RemoteServiceProxy<T> implements InvocationHandler {
             throw new ZRPCException(result.getMessage());
         }
 
-        if (annotation == null) {
+        if (throwableBinder == null) {
             throw new ZRPCBusinessException(result.getMessage());
         }
 
-        Class<? extends Throwable> exceptionClass = annotation.exceptionClass();
+        Class<? extends Throwable> exceptionClass = throwableBinder.exceptionClass();
         try {
             Constructor<? extends Throwable> classConstructor = exceptionClass.getConstructor(String.class);
             throw classConstructor.newInstance(result.getMessage());
@@ -153,15 +156,56 @@ public class RemoteServiceProxy<T> implements InvocationHandler {
         }
     }
 
-    private Class<?> getSerializerClass(ZRPCSerializeBinder[] serializerAnnotations, String resultType) throws ClassNotFoundException {
-        if (serializerAnnotations != null && serializerAnnotations.length > 0) {
-            Optional<ZRPCSerializeBinder> serializer = Arrays.stream(serializerAnnotations)
+    private String getMappingArgClassName(String needMappingTypeName, ZRPCSerializeBinder[] annotations) {
+        if (annotations == null) {
+            return needMappingTypeName;
+        }
+
+        if (needMappingTypeName.startsWith("[")) {
+            // Array
+            for (ZRPCSerializeBinder annotation : annotations) {
+                String currentRuntimeClassName = annotation.currentClass().getName();
+                if (needMappingTypeName.contains(currentRuntimeClassName)) {
+                    return needMappingTypeName.replaceAll(currentRuntimeClassName, annotation.remoteClassName());
+                }
+            }
+            return needMappingTypeName;
+        } else {
+            // If a matching annotation is found, use it remoteClassName
+            // Otherwise, use argValue class name by default.
+            Optional<ZRPCSerializeBinder> serializer = Arrays.stream(annotations)
+                    .filter(a -> a.currentClass().getName().equals(needMappingTypeName))
+                    .findFirst();
+            if (serializer.isPresent()) {
+                return serializer.get().remoteClassName();
+            }
+        }
+
+        return needMappingTypeName;
+    }
+
+    private Class<?> getDeSerializerClass(String resultType, ZRPCSerializeBinder[] annotations) throws ClassNotFoundException {
+        if (annotations == null) {
+            return Class.forName(resultType);
+        }
+
+        if (resultType.startsWith("[")) {
+            // Array
+            for (ZRPCSerializeBinder annotation : annotations) {
+                String remoteClassName = annotation.remoteClassName();
+                if (resultType.contains(remoteClassName)) {
+                    return Class.forName(resultType.replaceAll(remoteClassName, annotation.currentClass().getName()));
+                }
+            }
+        } else {
+            Optional<ZRPCSerializeBinder> serializer = Arrays.stream(annotations)
                     .filter(a -> a.remoteClassName().equals(resultType))
                     .findFirst();
             if (serializer.isPresent()) {
                 return serializer.get().currentClass();
             }
         }
+
         return Class.forName(resultType);
     }
 }
