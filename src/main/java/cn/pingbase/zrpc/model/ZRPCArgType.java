@@ -11,5 +11,6 @@ public enum ZRPCArgType {
     STRING,
     LIST,
     SET,
+    MAP,
     OBJECT,
 }

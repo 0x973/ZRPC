@@ -10,17 +10,17 @@ import java.lang.reflect.Proxy;
  * @date 2022/08/18 11:41
  * @description: TODO
  */
-public class RemoteServiceFactory<T> implements FactoryBean<T> {
+public class RemoteClientFactory<T> implements FactoryBean<T> {
     private final Class<T> interfaceType;
 
-    public RemoteServiceFactory(Class<T> interfaceType) {
+    public RemoteClientFactory(Class<T> interfaceType) {
         this.interfaceType = interfaceType;
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public T getObject() {
-        InvocationHandler handler = new RemoteServiceProxy<>(interfaceType);
+        InvocationHandler handler = new RemoteClientProxy<>(interfaceType);
         return (T) Proxy.newProxyInstance(interfaceType.getClassLoader(), new Class[]{interfaceType}, handler);
     }
 

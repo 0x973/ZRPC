@@ -34,6 +34,7 @@ public class ZRPCSerialization {
 
             return JSON.parseArray(json, elementType);
         } catch (Exception e) {
+            e.printStackTrace();
             return null;
         }
     }
@@ -50,6 +51,34 @@ public class ZRPCSerialization {
 
             return new HashSet<>(JSON.parseArray(json, elementType));
         } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <K, V> Map<K, V> parseMap(String json, Class<?> mapType, Class<K> keyType, Class<V> valueType) {
+        try {
+            Map<K, V> resultMap;
+            if (!mapType.isInterface()) {
+                Class<? extends AbstractMap<K, V>> type = (Class<? extends AbstractMap<K, V>>) mapType;
+                resultMap = type.newInstance();
+            } else {
+                resultMap = new HashMap<>();
+            }
+
+            Map<?, ?> map = JSON.parseObject(json, Map.class);
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                K key = (K) entry.getKey();
+                if (String.class.equals(valueType)) {
+                    resultMap.put(key, (V) entry.getValue().toString());
+                } else {
+                    resultMap.put(key, JSON.parseObject(entry.getValue().toString(), valueType));
+                }
+            }
+            return resultMap;
+        } catch (Exception e) {
+            e.printStackTrace();
             return null;
         }
     }

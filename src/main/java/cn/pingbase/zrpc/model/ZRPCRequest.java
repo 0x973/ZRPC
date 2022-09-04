@@ -40,6 +40,10 @@ public class ZRPCRequest {
         // 2. 在基本类型/对象类型时，这个值直接为对应类型(Mapping后)
         private String typeClassName = null;
 
+        // 仅类型为Map时，两个字段有值
+        private String keyClassName = null;
+        private String valueClassName = null;
+
         private String objectJson = null;
     }
 }

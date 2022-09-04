@@ -15,16 +15,21 @@ import lombok.NoArgsConstructor;
 public class ZRPCResponse {
     private boolean success;
     private boolean isBusinessException;
+
     private ZRPCArgType argType = ZRPCArgType.NONE;
     private String collectionTypeName;
-    private String resultType;
+    private String resultTypeName;
+    private String keyTypeName;
+    private String valueTypeName;
+
     private String resultJsonValue;
+
     private String message;
 
     public static ZRPCResponse makeSuccessResult(String resultType, String resultJsonValue) {
         ZRPCResponse response = new ZRPCResponse();
         response.setSuccess(true);
-        response.setResultType(resultType);
+        response.setResultTypeName(resultType);
         response.setResultJsonValue(resultJsonValue);
         return response;
     }
@@ -34,7 +39,7 @@ public class ZRPCResponse {
         response.setSuccess(true);
         response.setArgType(ZRPCArgType.LIST);
         response.setCollectionTypeName(collectionTypeName);
-        response.setResultType(elementType);
+        response.setResultTypeName(elementType);
         response.setResultJsonValue(resultJsonValue);
         return response;
     }
@@ -44,7 +49,19 @@ public class ZRPCResponse {
         response.setSuccess(true);
         response.setArgType(ZRPCArgType.SET);
         response.setCollectionTypeName(collectionTypeName);
-        response.setResultType(elementType);
+        response.setResultTypeName(elementType);
+        response.setResultJsonValue(resultJsonValue);
+        return response;
+    }
+
+    public static ZRPCResponse makeSuccessMapResult(String collectionTypeName, String keyType, String valueType,
+                                                    String resultJsonValue) {
+        ZRPCResponse response = new ZRPCResponse();
+        response.setSuccess(true);
+        response.setArgType(ZRPCArgType.MAP);
+        response.setCollectionTypeName(collectionTypeName);
+        response.setKeyTypeName(keyType);
+        response.setValueTypeName(valueType);
         response.setResultJsonValue(resultJsonValue);
         return response;
     }
@@ -68,5 +85,9 @@ public class ZRPCResponse {
 
     public boolean isSet() {
         return ZRPCArgType.SET.equals(this.getArgType());
+    }
+
+    public boolean isMap() {
+        return ZRPCArgType.MAP.equals(this.getArgType());
     }
 }

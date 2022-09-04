@@ -1,7 +1,8 @@
 package cn.pingbase.zrpc.client;
 
-import cn.pingbase.zrpc.annotation.ZRPCRemoteClient;
 import cn.pingbase.zrpc.annotation.ZRPCPackageScan;
+import cn.pingbase.zrpc.annotation.ZRPCRemoteClient;
+import org.jetbrains.annotations.NotNull;
 import org.reflections.Reflections;
 import org.reflections.util.ClasspathHelper;
 import org.springframework.aop.support.AopUtils;
@@ -57,17 +58,17 @@ public class RemoteClientBeanRegistry implements BeanDefinitionRegistryPostProce
         BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(clazz);
         GenericBeanDefinition definition = (GenericBeanDefinition) builder.getRawBeanDefinition();
         definition.getConstructorArgumentValues().addGenericArgumentValue(clazz);
-        definition.setBeanClass(RemoteServiceFactory.class);
+        definition.setBeanClass(RemoteClientFactory.class);
         definition.setAutowireMode(GenericBeanDefinition.AUTOWIRE_BY_TYPE);
         registry.registerBeanDefinition(clazz.getSimpleName(), definition);
     }
 
     @Override
-    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+    public void postProcessBeanFactory(@NotNull ConfigurableListableBeanFactory beanFactory) {
     }
 
     @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+    public void setApplicationContext(@NotNull ApplicationContext applicationContext) throws BeansException {
         RemoteClientBeanRegistry.context = applicationContext;
     }
 

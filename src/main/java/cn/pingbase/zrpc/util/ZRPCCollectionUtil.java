@@ -2,14 +2,18 @@ package cn.pingbase.zrpc.util;
 
 import java.lang.reflect.Array;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author: Zak
  * @date 2022/09/02 23:37
  * @description: TODO
  */
-public class CollectionUtil {
-    
+public class ZRPCCollectionUtil {
+
+    private ZRPCCollectionUtil() {
+    }
+
     public static boolean isArray(Class<?> clazz) {
         return Array.class.equals(clazz) || Array.class.equals(clazz.getSuperclass());
     }
@@ -28,5 +32,17 @@ public class CollectionUtil {
                 LinkedHashSet.class.equals(clazz) ||
                 TreeSet.class.equals(clazz) ||
                 AbstractSet.class.equals(clazz.getSuperclass());
+    }
+
+    public static boolean isMap(Class<?> clazz) {
+        return Map.class.equals(clazz) ||
+                HashMap.class.equals(clazz) ||
+                ConcurrentHashMap.class.equals(clazz) ||
+                LinkedHashMap.class.equals(clazz) ||
+                TreeMap.class.equals(clazz) ||
+                IdentityHashMap.class.equals(clazz) ||
+                WeakHashMap.class.equals(clazz) ||
+                EnumMap.class.equals(clazz) ||
+                AbstractMap.class.equals(clazz.getSuperclass());
     }
 }
