@@ -37,10 +37,9 @@ public class RemoteServiceController {
         }
 
         try {
-            return RemoteServiceHandle.invoke(beanObject, methodName, request.getArgs());
+            return new RemoteServiceHandle(beanObject, methodName, request.getArgs()).invoke();
         } catch (NoSuchMethodException e) {
             return ZRPCResponse.makeFailResult("Service method not found, please check your interface class.");
-
         } catch (Exception e) {
             log.warn("ZRPC Remote call exception.", e);
             return ZRPCResponse.makeFailResult("Server parsing error, message: " + e.getMessage());

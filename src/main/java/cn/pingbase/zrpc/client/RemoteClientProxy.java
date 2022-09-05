@@ -1,8 +1,6 @@
 package cn.pingbase.zrpc.client;
 
 import cn.pingbase.zrpc.annotation.ZRPCRemoteClient;
-import cn.pingbase.zrpc.annotation.ZRPCSerializeBinder;
-import cn.pingbase.zrpc.annotation.ZRPCThrowableBinder;
 import cn.pingbase.zrpc.exception.ZRPCException;
 import cn.pingbase.zrpc.model.ZRPCRequest;
 import cn.pingbase.zrpc.model.ZRPCResponse;
@@ -35,19 +33,13 @@ public class RemoteClientProxy<T> implements InvocationHandler {
             throw new ZRPCException("serverName or serviceIdentifier in `ZRPCRemoteClient` can not be empty.");
         }
 
-        ZRPCSerializeBinder[] serializerBinders = method.getDeclaredAnnotationsByType(ZRPCSerializeBinder.class);
-        ZRPCThrowableBinder throwableBinderAnnotation = method.getDeclaredAnnotation(ZRPCThrowableBinder.class);
-
-        ZRPCRequest request = RemoteClientRequestUtil.makeRequest(serverName, serviceIdentifier, method, args, serializerBinders);
+        ZRPCRequest request = new RemoteClientRequestHandle(serverName, serviceIdentifier, method, args).makeRequest();
         ZRPCResponse response = remoteCaller.call(request);
-        RemoteClientResponseUtil.checkResponse(response, throwableBinderAnnotation);
 
         try {
-            return RemoteClientResponseUtil.parse(response, serializerBinders);
+            return new RemoteClientResponseHandle(method, response).checkResponse().parse();
         } catch (ClassNotFoundException e) {
             throw new ZRPCException("Class not found, please check your package classes.", e);
-        } catch (Exception e) {
-            throw new ZRPCException(e);
         }
     }
 }

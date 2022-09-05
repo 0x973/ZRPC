@@ -17,10 +17,18 @@ import java.util.List;
  * @description: TODO
  */
 public class RemoteServiceHandle {
-    public RemoteServiceHandle() {
+
+    private final Object beanObject;
+    private final String methodName;
+    private final List<ZRPCRequest.Argument> args;
+
+    public RemoteServiceHandle(Object beanObject, String methodName, List<ZRPCRequest.Argument> args) {
+        this.beanObject = beanObject;
+        this.methodName = methodName;
+        this.args = args;
     }
 
-    public static ZRPCResponse invoke(Object beanObject, String methodName, List<ZRPCRequest.Argument> args) throws ClassNotFoundException, NoSuchMethodException {
+    public ZRPCResponse invoke() throws ClassNotFoundException, NoSuchMethodException {
         Class<?>[] argTypes = getArgClasses(args);
         Object[] argValues = getArgValues(args);
         Method method = beanObject.getClass().getMethod(methodName, argTypes);
@@ -39,7 +47,7 @@ public class RemoteServiceHandle {
         }
     }
 
-    private static ZRPCResponse makeResponse(Class<?> returnType, Type genericReturnType, Object result) {
+    private ZRPCResponse makeResponse(Class<?> returnType, Type genericReturnType, Object result) {
         String returnTypeName = returnType.getName();
         if (result == null) {
             return ZRPCResponse.makeSuccessResult(returnTypeName, null);
@@ -64,7 +72,7 @@ public class RemoteServiceHandle {
         return ZRPCResponse.makeSuccessResult(returnTypeName, jsonString);
     }
 
-    private static Class<?>[] getArgClasses(List<ZRPCRequest.Argument> args) throws ClassNotFoundException {
+    private Class<?>[] getArgClasses(List<ZRPCRequest.Argument> args) throws ClassNotFoundException {
         if (args == null) {
             return new Class<?>[0];
         }
@@ -76,15 +84,15 @@ public class RemoteServiceHandle {
         return argClasses;
     }
 
-    private static Object[] getArgValues(List<ZRPCRequest.Argument> args) throws ClassNotFoundException {
+    private Object[] getArgValues(List<ZRPCRequest.Argument> args) throws ClassNotFoundException {
         Object[] argValueArray = new Object[args.size()];
         for (int i = 0; i < args.size(); i++) {
-            argValueArray[i] = parseArgValue(args.get(i));
+            argValueArray[i] = this.parseArgValue(args.get(i));
         }
         return argValueArray;
     }
 
-    private static Object parseArgValue(ZRPCRequest.Argument argument) throws ClassNotFoundException {
+    private Object parseArgValue(ZRPCRequest.Argument argument) throws ClassNotFoundException {
         switch (argument.getArgType()) {
             case NULL: {
                 return null;

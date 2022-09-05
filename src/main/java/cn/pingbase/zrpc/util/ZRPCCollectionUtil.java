@@ -1,6 +1,5 @@
 package cn.pingbase.zrpc.util;
 
-import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -12,10 +11,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ZRPCCollectionUtil {
 
     private ZRPCCollectionUtil() {
-    }
-
-    public static boolean isArray(Class<?> clazz) {
-        return Array.class.equals(clazz) || Array.class.equals(clazz.getSuperclass());
     }
 
     public static boolean isList(Class<?> clazz) {
