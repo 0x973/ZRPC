@@ -37,7 +37,7 @@ public class RemoteServiceHandle {
             Class<?> returnType = method.getReturnType();
             Type genericReturnType = method.getGenericReturnType();
             Object result = method.invoke(beanObject, argValues);
-            return makeResponse(returnType, genericReturnType, result);
+            return this.makeResponse(returnType, genericReturnType, result);
 
         } catch (InvocationTargetException e) {
             return ZRPCResponse.makeBusinessFailResult(e.getTargetException().getMessage());

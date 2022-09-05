@@ -1,8 +1,9 @@
 # ZRPC(远程过程调用)框架文档
-    Ver: 1.0 | Updated: 2022.08.31 | @Zak
+    Ver: 1.0 | Updated: 2022.09.05 | @Zak
 
 ### 介绍
-ZRPC：一个基于Spring的轻量RPC(Remote Procedure Call)框架，解决多服务之间的远程函数调用。
+ZRPC：一个基于Spring的轻量RPC(Remote Procedure Call)框架，解决多服务之间的轻量远程函数调用问题。（复杂场景建议使用[Dubbo](https://github.com/apache/dubbo), 
+[gRPC](https://github.com/grpc/grpc)等其他RPC框架）
 ##### ✅ 配置简单，最小场景下只需要配置两处注解和一个配置文件。
 ##### ✅ 对业务代码无侵入，不需要改动任何业务逻辑代码。
 ##### ✅ 轻量级，无过多依赖，不依赖外部其他组件。
@@ -111,8 +112,9 @@ TestModel getTestModel(Body body);
 
 #### 2. 自定义业务异常
 
-当远程函数的执行出现业务的异常(逻辑代码主动抛出的异常)，默认RPC调用方收到的异常类型为`ZRPCBusinessException`
-某些场景RPC调用方需要根据特定的异常类型进行逻辑处理，使用者仅需要在调用方的interface中具体函数上注解`@ZRPCThrowableBinder`即可自定义业务异常类型(异常中的`message`字段已赋值为提供方抛异常时的值)
+- 当远程函数的执行出现业务的异常(逻辑代码主动抛出的异常)，默认RPC调用方收到的异常类型为`ZRPCBusinessException`
+- 但某些场景下RPC调用方需要根据特定异常类型进行逻辑处理，这时仅需在调用方的interface中函数上注解`@ZRPCThrowableBinder`即可自定义业务异常类型
+- 异常中的`message`字段已赋值为提供方抛异常时的值，stack信息在这个场景下意义不大，不进行传递。
 ```java
 @ZRPCThrowableBinder(exceptionClass = CustomException.class)
 void check();
@@ -158,6 +160,7 @@ zrpc:
 ```
 
 ### TODO🚴‍♂️
+- [ ] 英文文档、调用示例程序。
 - [ ] 提升资源隔离性（独立线程，独立连接），降低某些场景下对业务本身的影响。
 - [ ] 支持配置多种序列化框架，给用户更多的选择空间。
 - [ ] 兼容主流注册中心协议，如：Nacos、Consul、Etcd等。
