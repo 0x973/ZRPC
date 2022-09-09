@@ -17,7 +17,6 @@ import org.springframework.util.Assert;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
-import java.net.URL;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -29,39 +28,37 @@ import java.util.concurrent.TimeUnit;
 public class RemoteCaller implements ApplicationContextAware {
 
     private static final MediaType MEDIA_TYPE_JSON = MediaType.get("application/json; charset=utf-8");
-    private static final String ZRPC_CONTROLLER_PATH = "/zrpc";
+    private static final String ZRPC_CONTROLLER_PATH_PREFIX = "/zrpc";
     private static ApplicationContext applicationContext;
 
     private volatile ZRPCSocketConfig lastSocketConfig;
     private volatile OkHttpClient httpClient;
 
-    public ZRPCResponse call(ZRPCRequest request) throws ZRPCException {
-        ZRPCConfig.RemoteConfig remoteConfig = this.getZRPConfig().getRemoteConfig(request.getServerName());
+    public ZRPCResponse call(String serverName, String serviceIdentifier, String methodName, ZRPCRequest request) throws ZRPCException {
+        ZRPCConfig.RemoteConfig remoteConfig = this.getZRPConfig().getRemoteConfig(serverName);
         if (remoteConfig == null) {
-            throw new ZRPCException("Could not find server name in zrpc remote config, name: " + request.getServerName());
+            throw new ZRPCException("Could not find server name in zrpc remote config, name: " + serverName);
         }
 
         try {
-            URL url = UriComponentsBuilder.newInstance().scheme(remoteConfig.getSchema())
+            String url = UriComponentsBuilder.newInstance().scheme(remoteConfig.getSchema())
                     .host(remoteConfig.getEndpoint())
                     .port(remoteConfig.getPort())
-                    .path(ZRPC_CONTROLLER_PATH)
-                    .build().toUri().toURL();
-            return ZRPCSerialization.parseObject(this.sendPost(url, request), ZRPCResponse.class);
+                    .pathSegment(ZRPC_CONTROLLER_PATH_PREFIX, serviceIdentifier, methodName)
+                    .build().toUriString();
+            String postResult = this.sendPost(url, request);
+            return ZRPCSerialization.parseObject(postResult, ZRPCResponse.class);
         } catch (Exception e) {
             return ZRPCResponse.makeFailResult("Remote call failed, message: " + e.getMessage());
         }
     }
 
-    private String sendPost(URL url, Object obj) throws IOException {
-        RequestBody body = RequestBody.create(ZRPCSerialization.toJSONString(obj), MEDIA_TYPE_JSON);
-        Request request = new Request.Builder()
-                .header(HttpHeaders.USER_AGENT, ZRPConstants.REMOTE_CALLER_USERAGENT)
-                .url(url)
-                .post(body)
-                .build();
+    private String sendPost(String url, Object obj) throws IOException {
+        Request.Builder reqBuilder = new Request.Builder().url(url)
+                .post(RequestBody.create(ZRPCSerialization.toJSONString(obj), MEDIA_TYPE_JSON));
+        this.injectHeaders(reqBuilder);
 
-        try (Response response = this.getHttpClient().newCall(request).execute()) {
+        try (Response response = this.getHttpClient().newCall(reqBuilder.build()).execute()) {
             if (!response.isSuccessful()) {
                 return null;
             }
@@ -99,10 +96,26 @@ public class RemoteCaller implements ApplicationContextAware {
         }
     }
 
+    private void injectHeaders(Request.Builder reqBuilder) {
+        reqBuilder.header(HttpHeaders.USER_AGENT, ZRPConstants.REMOTE_CALLER_USERAGENT);
+        String applicationName = this.getSpringApplicationName();
+        if (applicationName != null) {
+            reqBuilder.header(HttpHeaders.REFERER, applicationName);
+        }
+    }
+
     private ZRPCConfig getZRPConfig() {
         ZRPCConfig zrpcConfig = applicationContext.getBean(ZRPCConfig.class);
         Assert.notNull(zrpcConfig, "The ZRPC config can not be null.");
         return zrpcConfig;
+    }
+
+    private String getSpringApplicationName() {
+        String appName = applicationContext.getEnvironment().getProperty("spring.application.name", "");
+        if ("".equals(appName)) {
+            return null;
+        }
+        return appName;
     }
 
     @Override

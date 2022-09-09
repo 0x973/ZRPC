@@ -57,24 +57,24 @@ public class RemoteClientResponseHandle {
 
     public Object parse() throws ClassNotFoundException {
         if (response.isList()) {
-            Class<?> clazz = this.convertResultType(response.getResultTypeName());
-            Class<?> listType = this.convertResultType(response.getCollectionTypeName());
-            return ZRPCSerialization.parseList(response.getResultJsonValue(), listType, clazz);
+            Class<?> clazz = this.convertResultType(response.getResultClassName());
+            Class<?> listType = this.convertResultType(response.getCollectionClassName());
+            return ZRPCSerialization.parseList(response.getDataJson(), listType, clazz);
 
         } else if (response.isSet()) {
-            Class<?> clazz = this.convertResultType(response.getResultTypeName());
-            Class<?> setType = this.convertResultType(response.getCollectionTypeName());
-            return ZRPCSerialization.parseSet(response.getResultJsonValue(), setType, clazz);
+            Class<?> clazz = this.convertResultType(response.getResultClassName());
+            Class<?> setType = this.convertResultType(response.getCollectionClassName());
+            return ZRPCSerialization.parseSet(response.getDataJson(), setType, clazz);
 
         } else if (response.isMap()) {
-            Class<?> mapType = this.convertResultType(response.getCollectionTypeName());
-            Class<?> keyType = this.convertResultType(response.getKeyTypeName());
-            Class<?> valueType = this.convertResultType(response.getValueTypeName());
-            return ZRPCSerialization.parseMap(response.getResultJsonValue(), mapType, keyType, valueType);
+            Class<?> mapType = this.convertResultType(response.getCollectionClassName());
+            Class<?> keyType = this.convertResultType(response.getKeyClassName());
+            Class<?> valueType = this.convertResultType(response.getValueClassName());
+            return ZRPCSerialization.parseMap(response.getDataJson(), mapType, keyType, valueType);
 
         } else {
-            Class<?> clazz = this.convertResultType(response.getResultTypeName());
-            return ZRPCSerialization.parseObject(response.getResultJsonValue(), clazz);
+            Class<?> clazz = this.convertResultType(response.getResultClassName());
+            return ZRPCSerialization.parseObject(response.getDataJson(), clazz);
         }
     }
 

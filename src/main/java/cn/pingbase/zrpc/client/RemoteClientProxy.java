@@ -33,8 +33,8 @@ public class RemoteClientProxy<T> implements InvocationHandler {
             throw new ZRPCException("serverName or serviceIdentifier in `ZRPCRemoteClient` can not be empty.");
         }
 
-        ZRPCRequest request = new RemoteClientRequestHandle(serverName, serviceIdentifier, method, args).makeRequest();
-        ZRPCResponse response = remoteCaller.call(request);
+        ZRPCRequest request = new RemoteClientRequestHandle(method, args).makeRequest();
+        ZRPCResponse response = remoteCaller.call(serverName, serviceIdentifier, method.getName(), request);
 
         try {
             return new RemoteClientResponseHandle(method, response).checkResponse().parse();

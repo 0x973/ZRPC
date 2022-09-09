@@ -10,6 +10,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -20,15 +21,11 @@ import java.util.Optional;
  */
 public class RemoteClientRequestHandle {
 
-    private final String serverName;
-    private final String serviceIdentifier;
     private final Method method;
     private final Object[] args;
     private final ZRPCSerializeBinder[] serializerBinders;
 
-    public RemoteClientRequestHandle(String serverName, String serviceIdentifier, Method method, Object[] args) {
-        this.serverName = serverName;
-        this.serviceIdentifier = serviceIdentifier;
+    public RemoteClientRequestHandle(Method method, Object[] args) {
         this.method = method;
         this.args = args;
         this.serializerBinders = method.getDeclaredAnnotationsByType(ZRPCSerializeBinder.class);
@@ -36,14 +33,15 @@ public class RemoteClientRequestHandle {
 
     public ZRPCRequest makeRequest() {
         ZRPCRequest request = new ZRPCRequest();
-        request.setServerName(serverName);
-        request.setIdentifier(serviceIdentifier);
-        request.setMethodName(method.getName());
 
         if (args != null) {
+            if (request.getArgs() == null) {
+                request.setArgs(new ArrayList<>());
+            }
+
+            Parameter[] methodParameters = method.getParameters();
             for (int i = 0; i < args.length; i++) {
-                Parameter methodParameter = method.getParameters()[i];
-                request.getArgs().add(this.makeRequestArgument(methodParameter, args[i]));
+                request.getArgs().add(this.makeRequestArgument(methodParameters[i], args[i]));
             }
         }
 
@@ -59,14 +57,14 @@ public class RemoteClientRequestHandle {
         if (argValue == null) {
             argument.setArgType(ZRPCArgType.NULL);
             argument.setTypeClassName(formalClassName);
-            argument.setObjectJson(null);
+            argument.setDataJson(null);
             return argument;
         }
 
         if (String.class.equals(argValue.getClass())) {
             argument.setArgType(ZRPCArgType.STRING);
             argument.setTypeClassName(String.class.getName());
-            argument.setObjectJson((String) argValue);
+            argument.setDataJson((String) argValue);
             return argument;
         }
 
@@ -86,7 +84,7 @@ public class RemoteClientRequestHandle {
             // Object or Array ...
             this.objectHandle(argument, actualTypeArguments, argValueTypeName);
         }
-        argument.setObjectJson(ZRPCSerialization.toJSONString(argValue));
+        argument.setDataJson(ZRPCSerialization.toJSONString(argValue));
         return argument;
     }
 

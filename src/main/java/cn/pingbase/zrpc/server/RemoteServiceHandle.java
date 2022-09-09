@@ -29,8 +29,8 @@ public class RemoteServiceHandle {
     }
 
     public ZRPCResponse invoke() throws ClassNotFoundException, NoSuchMethodException {
-        Class<?>[] argTypes = getArgClasses(args);
-        Object[] argValues = getArgValues(args);
+        Class<?>[] argTypes = this.getArgClasses(args);
+        Object[] argValues = this.getArgValues(args);
         Method method = beanObject.getClass().getMethod(methodName, argTypes);
 
         try {
@@ -38,10 +38,8 @@ public class RemoteServiceHandle {
             Type genericReturnType = method.getGenericReturnType();
             Object result = method.invoke(beanObject, argValues);
             return this.makeResponse(returnType, genericReturnType, result);
-
         } catch (InvocationTargetException e) {
             return ZRPCResponse.makeBusinessFailResult(e.getTargetException().getMessage());
-
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
@@ -85,6 +83,10 @@ public class RemoteServiceHandle {
     }
 
     private Object[] getArgValues(List<ZRPCRequest.Argument> args) throws ClassNotFoundException {
+        if (args == null) {
+            return new Object[0];
+        }
+
         Object[] argValueArray = new Object[args.size()];
         for (int i = 0; i < args.size(); i++) {
             argValueArray[i] = this.parseArgValue(args.get(i));
@@ -98,27 +100,27 @@ public class RemoteServiceHandle {
                 return null;
             }
             case STRING: {
-                return argument.getObjectJson();
+                return argument.getDataJson();
             }
             case LIST: {
                 Class<?> listClass = Class.forName(argument.getCollectionClassName());
                 Class<?> elementClass = Class.forName(argument.getTypeClassName());
-                return ZRPCSerialization.parseList(argument.getObjectJson(), listClass, elementClass);
+                return ZRPCSerialization.parseList(argument.getDataJson(), listClass, elementClass);
             }
             case SET: {
                 Class<?> setClass = Class.forName(argument.getCollectionClassName());
                 Class<?> elementClass = Class.forName(argument.getTypeClassName());
-                return ZRPCSerialization.parseSet(argument.getObjectJson(), setClass, elementClass);
+                return ZRPCSerialization.parseSet(argument.getDataJson(), setClass, elementClass);
             }
             case MAP: {
                 Class<?> mapClass = Class.forName(argument.getCollectionClassName());
                 Class<?> keyClass = Class.forName(argument.getKeyClassName());
                 Class<?> valueClass = Class.forName(argument.getValueClassName());
-                return ZRPCSerialization.parseMap(argument.getObjectJson(), mapClass, keyClass, valueClass);
+                return ZRPCSerialization.parseMap(argument.getDataJson(), mapClass, keyClass, valueClass);
             }
             case OBJECT:
             default: {
-                return ZRPCSerialization.parseObject(argument.getObjectJson(), Class.forName(argument.getTypeClassName()));
+                return ZRPCSerialization.parseObject(argument.getDataJson(), Class.forName(argument.getTypeClassName()));
             }
         }
     }

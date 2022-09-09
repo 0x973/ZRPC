@@ -17,20 +17,19 @@ public class ZRPCResponse {
     private boolean isBusinessException;
 
     private ZRPCArgType argType = ZRPCArgType.NONE;
-    private String collectionTypeName;
-    private String resultTypeName;
-    private String keyTypeName;
-    private String valueTypeName;
+    private String collectionClassName;
+    private String resultClassName;
+    private String keyClassName;
+    private String valueClassName;
 
-    private String resultJsonValue;
-
+    private String dataJson;
     private String message;
 
     public static ZRPCResponse makeSuccessResult(String resultType, String resultJsonValue) {
         ZRPCResponse response = new ZRPCResponse();
         response.setSuccess(true);
-        response.setResultTypeName(resultType);
-        response.setResultJsonValue(resultJsonValue);
+        response.setResultClassName(resultType);
+        response.setDataJson(resultJsonValue);
         return response;
     }
 
@@ -38,9 +37,9 @@ public class ZRPCResponse {
         ZRPCResponse response = new ZRPCResponse();
         response.setSuccess(true);
         response.setArgType(ZRPCArgType.LIST);
-        response.setCollectionTypeName(collectionTypeName);
-        response.setResultTypeName(elementType);
-        response.setResultJsonValue(resultJsonValue);
+        response.setCollectionClassName(collectionTypeName);
+        response.setResultClassName(elementType);
+        response.setDataJson(resultJsonValue);
         return response;
     }
 
@@ -48,9 +47,9 @@ public class ZRPCResponse {
         ZRPCResponse response = new ZRPCResponse();
         response.setSuccess(true);
         response.setArgType(ZRPCArgType.SET);
-        response.setCollectionTypeName(collectionTypeName);
-        response.setResultTypeName(elementType);
-        response.setResultJsonValue(resultJsonValue);
+        response.setCollectionClassName(collectionTypeName);
+        response.setResultClassName(elementType);
+        response.setDataJson(resultJsonValue);
         return response;
     }
 
@@ -59,10 +58,10 @@ public class ZRPCResponse {
         ZRPCResponse response = new ZRPCResponse();
         response.setSuccess(true);
         response.setArgType(ZRPCArgType.MAP);
-        response.setCollectionTypeName(collectionTypeName);
-        response.setKeyTypeName(keyType);
-        response.setValueTypeName(valueType);
-        response.setResultJsonValue(resultJsonValue);
+        response.setCollectionClassName(collectionTypeName);
+        response.setKeyClassName(keyType);
+        response.setValueClassName(valueType);
+        response.setDataJson(resultJsonValue);
         return response;
     }
 
