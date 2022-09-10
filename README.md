@@ -1,5 +1,5 @@
 # ZRPC(远程过程调用)框架文档
-    Ver: 1.0 | Updated: 2022.09.05 | @Zak
+    Ver: 1.0 | Updated: 2022.09.10 | @Zak
 
 ### 介绍
 ZRPC：一个基于Spring的轻量RPC(Remote Procedure Call)框架，解决多服务之间的轻量远程函数调用问题。（复杂场景建议使用[Dubbo](https://github.com/apache/dubbo), 
@@ -80,9 +80,15 @@ ZRPC：一个基于Spring的轻量RPC(Remote Procedure Call)框架，解决多�
    ```
 6. 调用接口
     ```java
+    // (IDEA警告可忽略: "Could not autowire. No beans of 'TestService' type found.")
     @Autowired
-    TestService testService; // (IDEA警告可忽略: "Could not autowire. No beans of 'TestService' type found.")
+    TestService testService;
+   
+    // 或使用J2EE的@Resource注入方式，这样不会有IDEA的"Could not autowire"警告
+    @Resource
+    TestService testService;
     
+    // 调用接口方法
     testService.test();
     ```
 
