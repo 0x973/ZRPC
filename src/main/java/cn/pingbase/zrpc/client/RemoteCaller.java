@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 public class RemoteCaller implements ApplicationContextAware {
 
     private static final MediaType MEDIA_TYPE_JSON = MediaType.get("application/json; charset=utf-8");
-    private static final String ZRPC_CONTROLLER_PATH_PREFIX = "/zrpc";
+    private static final String ZRPC_CONTROLLER_PATH_PREFIX = "zrpc";
     private static ApplicationContext applicationContext;
 
     private volatile ZRPCSocketConfig lastSocketConfig;
